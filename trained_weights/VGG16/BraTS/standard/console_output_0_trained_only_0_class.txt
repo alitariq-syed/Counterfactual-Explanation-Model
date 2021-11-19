@@ -1,0 +1,141 @@
+save_path:  ./trained_weights/VGG16/BraTS/standard
+resuming training
+
+ Namespace(alter_class=0, alter_class_2=0, analysis_class=0, analyze_filter_importance=False, cfe_epochs=100, counterfactual_PP=True, create_counterfactual_combined=True, dataset='BraTS', filter_category_method='own_reduce_loss', filter_modified_directly=True, filter_visualization=True, find_filter_class=False, find_global_filters=False, fine_tune=True, fixed_classes=True, fixed_classes_reduce_loss=True, full_standard=True, high_capacity_model=True, imagenet_weights=True, interpretable=False, l1_weight=1, load_counterfactual_net=True, loss_compute=True, model='VGG16/', resume=True, resume_counterfactual_net=False, save_directory='./trained_weights/', save_filter_fmap=False, save_filter_importance=False, save_logFile=True, save_path='./trained_weights/VGG16/BraTS/standard', save_top_layer=True, test=False, test_counterfactual_net=False, test_filter_importance=False, train=False, train_counterfactual_net=True, train_using_builtin_fit_method=True, visualize_fmaps=False) 
+
+batch_size:  32
+BraTS 2020 dataset
+num classes: 2
+using imagenet_weights
+Found 23664 images belonging to 1 classes.
+Found 2629 images belonging to 1 classes.
+Found 17489 images belonging to 1 classes.
+Found 1943 images belonging to 1 classes.
+Found 4990 images belonging to 1 classes.
+Found 4990 images belonging to 1 classes.
+loading VGG model
+using VGG16 imagenet weights for BraTS dataset
+input_1
+block1_conv1
+block1_conv2
+block1_pool
+block2_conv1
+block2_conv2
+block2_pool
+block3_conv1
+block3_conv2
+block3_conv3
+block3_pool
+block4_conv1
+block4_conv2
+block4_conv3
+block4_pool
+block5_conv1
+block5_conv2
+block5_conv3
+block5_pool
+block1_conv1 		 (None, 240, 240, 64)
+block1_conv2 		 (None, 240, 240, 64)
+block2_conv1 		 (None, 120, 120, 128)
+block2_conv2 		 (None, 120, 120, 128)
+block3_conv1 		 (None, 60, 60, 256)
+block3_conv2 		 (None, 60, 60, 256)
+block3_conv3 		 (None, 60, 60, 256)
+block4_conv1 		 (None, 30, 30, 512)
+block4_conv2 		 (None, 30, 30, 512)
+block4_conv3 		 (None, 30, 30, 512)
+block5_conv1 		 (None, 15, 15, 512)
+block5_conv2 		 (None, 15, 15, 512)
+block5_conv3 		 (None, 15, 15, 512)
+total neurons:  4224
+Model: "base_model"
+__________________________________________________________________________________________________
+Layer (type)                    Output Shape         Param #     Connected to                     
+==================================================================================================
+input_1 (InputLayer)            [(None, 240, 240, 3) 0                                            
+__________________________________________________________________________________________________
+block1_conv1 (Conv2D)           (None, 240, 240, 64) 1792        input_1[0][0]                    
+__________________________________________________________________________________________________
+block1_conv2 (Conv2D)           (None, 240, 240, 64) 36928       block1_conv1[0][0]               
+__________________________________________________________________________________________________
+block1_pool (MaxPooling2D)      (None, 120, 120, 64) 0           block1_conv2[0][0]               
+__________________________________________________________________________________________________
+block2_conv1 (Conv2D)           (None, 120, 120, 128 73856       block1_pool[0][0]                
+__________________________________________________________________________________________________
+block2_conv2 (Conv2D)           (None, 120, 120, 128 147584      block2_conv1[0][0]               
+__________________________________________________________________________________________________
+block2_pool (MaxPooling2D)      (None, 60, 60, 128)  0           block2_conv2[0][0]               
+__________________________________________________________________________________________________
+block3_conv1 (Conv2D)           (None, 60, 60, 256)  295168      block2_pool[0][0]                
+__________________________________________________________________________________________________
+block3_conv2 (Conv2D)           (None, 60, 60, 256)  590080      block3_conv1[0][0]               
+__________________________________________________________________________________________________
+block3_conv3 (Conv2D)           (None, 60, 60, 256)  590080      block3_conv2[0][0]               
+__________________________________________________________________________________________________
+block3_pool (MaxPooling2D)      (None, 30, 30, 256)  0           block3_conv3[0][0]               
+__________________________________________________________________________________________________
+block4_conv1 (Conv2D)           (None, 30, 30, 512)  1180160     block3_pool[0][0]                
+__________________________________________________________________________________________________
+block4_conv2 (Conv2D)           (None, 30, 30, 512)  2359808     block4_conv1[0][0]               
+__________________________________________________________________________________________________
+block4_conv3 (Conv2D)           (None, 30, 30, 512)  2359808     block4_conv2[0][0]               
+__________________________________________________________________________________________________
+block4_pool (MaxPooling2D)      (None, 15, 15, 512)  0           block4_conv3[0][0]               
+__________________________________________________________________________________________________
+block5_conv1 (Conv2D)           (None, 15, 15, 512)  2359808     block4_pool[0][0]                
+__________________________________________________________________________________________________
+block5_conv2 (Conv2D)           (None, 15, 15, 512)  2359808     block5_conv1[0][0]               
+__________________________________________________________________________________________________
+block5_conv3 (Conv2D)           (None, 15, 15, 512)  2359808     block5_conv2[0][0]               
+__________________________________________________________________________________________________
+max_pooling2d (MaxPooling2D)    (None, 7, 7, 512)    0           block5_conv3[0][0]               
+__________________________________________________________________________________________________
+global_average_pooling2d (Globa (None, 512)          0           max_pooling2d[0][0]              
+__________________________________________________________________________________________________
+input_2 (InputLayer)            [(None, 512)]        0                                            
+__________________________________________________________________________________________________
+tf.math.multiply (TFOpLambda)   (None, 512)          0           global_average_pooling2d[0][0]   
+                                                                 input_2[0][0]                    
+__________________________________________________________________________________________________
+dense (Dense)                   (None, 2)            1026        tf.math.multiply[0][0]           
+__________________________________________________________________________________________________
+activation (Activation)         (None, 2)            0           dense[0][0]                      
+==================================================================================================
+Total params: 14,715,714
+Trainable params: 1,026
+Non-trainable params: 14,714,688
+__________________________________________________________________________________________________
+weights loaded
+threshold:  0.5
+l1 weight:  1
+training CF model for alter class:  non_tumor
+Training CF model for PPs
+Model: "model_1"
+__________________________________________________________________________________________________
+Layer (type)                    Output Shape         Param #     Connected to                     
+==================================================================================================
+input_3 (InputLayer)            [(None, 240, 240, 3) 0                                            
+__________________________________________________________________________________________________
+counterfactual_model (Functiona (None, 512)          14977344    input_3[0][0]                    
+__________________________________________________________________________________________________
+base_model (Functional)         [(None, 2), (None, 1 14715714    input_3[0][0]                    
+                                                                 counterfactual_model[0][0]       
+==================================================================================================
+Total params: 14,978,370
+Trainable params: 262,656
+Non-trainable params: 14,715,714
+__________________________________________________________________________________________________
+training for fixed alter class:  non_tumor
+  0%|          | 0/740 [00:00<?, ?it/s]epoch 0: 100%|##########| 740/740 [09:21<00:00,  1.32it/s, acc=1, loss=[0.024150914, 1.2449925, -0.060752314, 0.0, 68.82318, 0.0]]
+  0%|          | 0/740 [00:00<?, ?it/s]epoch 1: 100%|##########| 740/740 [03:50<00:00,  3.21it/s, acc=1, loss=[0.026171891, 0.19145137, -0.058367617, 0.0, 11.073648, 0.0]]
+  0%|          | 0/740 [00:00<?, ?it/s]epoch 2: 100%|##########| 740/740 [03:50<00:00,  3.21it/s, acc=1, loss=[0.02640937, 0.104044795, -0.058076184, 0.0, 6.041512, 0.0]]
+  0%|          | 0/740 [00:00<?, ?it/s]epoch 3: 100%|##########| 740/740 [03:51<00:00,  3.19it/s, acc=1, loss=[0.026495555, 0.07012727, -0.057962164, 0.0, 4.0809546, 0.0]]
+  0%|          | 0/740 [00:00<?, ?it/s]epoch 4: 100%|##########| 740/740 [03:50<00:00,  3.21it/s, acc=1, loss=[0.026531797, 0.052574713, -0.0579103, 0.0, 3.0683277, 0.0]]
+  0%|          | 0/740 [00:00<?, ?it/s]epoch 5: 100%|##########| 740/740 [03:50<00:00,  3.22it/s, acc=1, loss=[0.026551953, 0.04163692, -0.057879556, 0.0, 2.4325168, 0.0]]
+  0%|          | 0/740 [00:00<?, ?it/s]epoch 6: 100%|##########| 740/740 [03:49<00:00,  3.22it/s, acc=1, loss=[0.026561726, 0.034380388, -0.057860658, 0.0, 2.0099661, 0.0]]
+  0%|          | 0/740 [00:00<?, ?it/s]epoch 7: 100%|##########| 740/740 [03:50<00:00,  3.21it/s, acc=1, loss=[0.026574612, 0.029094616, -0.05784046, 0.0, 1.7013514, 0.0]]
+  0%|          | 0/740 [00:00<?, ?it/s]epoch 8: 100%|##########| 740/740 [03:49<00:00,  3.22it/s, acc=1, loss=[0.026578696, 0.025131764, -0.05782937, 0.0, 1.470946, 0.0]]
+  0%|          | 0/740 [00:00<?, ?it/s]epoch 9: 100%|##########| 740/740 [03:49<00:00,  3.23it/s, acc=1, loss=[0.026583375, 0.02212103, -0.057824023, 0.0, 1.2955236, 0.0]]
+  0%|          | 0/740 [00:00<?, ?it/s]epoch 10: 100%|##########| 740/740 [03:49<00:00,  3.22it/s, acc=1, loss=[0.026585406, 0.019703588, -0.05781841, 0.0, 1.155701, 0.0]]
+  0%|          | 0/740 [00:00<?, ?it/s]epoch 11: 100%|##########| 740/740 [03:49<00:00,  3.22it/s, acc=1, loss=[0.026584445, 0.017717088, -0.057813305, 0.0, 1.0399493, 0.0]]
+  0%|          | 0/740 [00:00<?, ?it/s]epoch 12:  18%|#7        | 132/740 [00:43<03:21,  3.02it/s, acc=1, loss=[0.026573176, 0.016520286, -0.05785817, 0.0, 0.96898675, 0.0]]
