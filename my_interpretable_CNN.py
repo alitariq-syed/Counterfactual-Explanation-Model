@@ -69,8 +69,8 @@ parser.add_argument('--resume_counterfactual_net' ,default = False)## False = tr
 parser.add_argument('--test_counterfactual_net' ,default = False)## 
 parser.add_argument('--load_counterfactual_net',default = True)
 parser.add_argument('--resume', default =True) # load saved weights for base model
-parser.add_argument('--alter_class', default = 1, type = np.int32) # alter class #misclassified classes 9-170
-parser.add_argument('--analysis_class', default = 1, type = np.int32) # class for which images are loaded and analyzed
+parser.add_argument('--alter_class', default = 9, type = np.int32) # alter class #misclassified classes 9-170
+parser.add_argument('--analysis_class', default = 9, type = np.int32) # class for which images are loaded and analyzed
 parser.add_argument('--find_global_filters', default = False) # perform statistical analysis to find the activation magnitude of all filters for the alter class and train images of alter class
 parser.add_argument('--alter_class_2', default = 0, type = np.int32) # alter class for 2nd example, 9, 170, 25, 125, 108
 parser.add_argument('--cfe_epochs', default = 30, type = np.int32 ) #100 for mnist, 200 for CUB
@@ -81,7 +81,7 @@ parser.add_argument('--save_logFile', default = False,type=np.bool) #
 
 
 #base model parameters
-parser.add_argument('--dataset',default = 'NIST')#NIST, BraTS,mnist, cifar10, CUB200, #cxr1000, #catsvsdogs, #VOC2010
+parser.add_argument('--dataset',default = 'CUB200')#NIST, BraTS,mnist, cifar10, CUB200, #cxr1000, #catsvsdogs, #VOC2010
 parser.add_argument('--save_directory',default = './trained_weights/')
 parser.add_argument('--train_using_builtin_fit_method',default = True)#for training base model easily
 parser.add_argument('--train',default = False)
@@ -163,7 +163,7 @@ print('\n',args, '\n')
 if args.dataset =='mnist':
     batch_size = 32
 else:
-    batch_size =32# 16 for analysis, 32 for training
+    batch_size =16# 16 for analysis, 32 for training
 
 top_activation = 'softmax'
 loss = categorical_crossentropy    
@@ -2161,7 +2161,7 @@ if True:
                 PP_filter_list = np.where(filters_off[0]>0)#same for PP or PN
                 k=5 #top k images
                 for i in range(top_k):
-                    filter_visualization_top_k(model,test_gen,top_3_filters[i],k,args,show_images=False, gradCAM=True, class_specific_top_k=False, RF = True)
+                    filter_visualization_top_k(model,test_gen,top_3_filters[i],k,args,show_images=False, gradCAM=True, class_specific_top_k=True, RF = True)
                 
                 print("\n")
                 for i in range(top_k): print("filter "+str(top_3_filters[i])+" weight for class "+str(args.alter_class)+": "+str(W[top_3_filters[i],args.alter_class].numpy()))

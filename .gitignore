@@ -3,3 +3,4 @@
 *.v2
 *.hdf5
 *.npy
+/filter_visualization/
