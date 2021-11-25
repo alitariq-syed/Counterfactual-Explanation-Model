@@ -79,7 +79,25 @@ def filter_visualization_same_image(model,combined,img,img_ind,filts, args,show_
     
     # fig.suptitle(bot_k_title)
     # fig2.suptitle(top_k_title)
+    
+    for_user_evaluation=True
+    if for_user_evaluation:
+        plt.savefig(fname="./Comparison with SCOUT/"+str(img_ind)+"_PP.png", dpi=300, bbox_inches = 'tight')
     plt.show()
+
+    #save gradCAm original    
+    if for_user_evaluation:
+        default_fmatrix = np.ones((1, model.output[1].shape[3]))#512=generator.output.shape[1]
+        heatmap_threshold = 0.8
+        output_gradcam_original,_ = explainer.explain((np.expand_dims(img,0),None),model,target_class,image_nopreprocessed=np.expand_dims(img_post_process,0),fmatrix=np.expand_dims(default_fmatrix[0],0),image_weight=0.8, RF=False,heatmap_threshold=heatmap_threshold)
+        
+        plt.imshow(output_gradcam_original), plt.axis('off'), plt.savefig(fname="./Comparison with SCOUT/"+str(img_ind)+"_GradCAM_original.png", dpi=100, bbox_inches = 'tight')
+        plt.show()
+
+        plt.imshow(img_post_process), plt.axis('off'), plt.savefig(fname="./Comparison with SCOUT/"+str(img_ind)+"_original.png", dpi=100, bbox_inches = 'tight')
+        # plt.show()
+
+
     
     #TODO: plot in sorted order
 

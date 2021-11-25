@@ -4,3 +4,4 @@
 *.hdf5
 *.npy
 /filter_visualization/
+*.png

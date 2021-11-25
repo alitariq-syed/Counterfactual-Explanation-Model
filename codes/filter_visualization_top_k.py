@@ -15,7 +15,7 @@ from tf_explain_modified.core.grad_cam import GradCAM
 from skimage.transform import resize
 
 
-def filter_visualization_top_k(model,gen,T, top_k, args,show_images,gradCAM,class_specific_top_k, RF):
+def filter_visualization_top_k(model,gen,T, top_k, args,show_images,gradCAM,class_specific_top_k, RF,img_number):
     print("\n\nfinding top k images for target filter ", str(T))
 
     if gradCAM:
@@ -217,6 +217,11 @@ def filter_visualization_top_k(model,gen,T, top_k, args,show_images,gradCAM,clas
     
     fig.suptitle(bot_k_title)
     fig2.suptitle(top_k_title)
+    
+    for_user_evaluation=True
+    if for_user_evaluation:
+        plt.savefig(fname="./Comparison with SCOUT/"+str(img_number)+"_PN_filter_"+str(T)+".png", dpi=300, bbox_inches = 'tight')
+
     plt.show()
     
     #TODO: plot in sorted order

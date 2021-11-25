@@ -133,7 +133,7 @@ def create_smooth_mask(heatmap):
             t_p[i,j] = max(1-4*(np.linalg.norm(np.array([i, j]) - mu, ord=2)/n),0.5)
     return t_p
 def heatmap_area_display(
-    heatmap, original_image, colormap=cv2.COLORMAP_VIRIDIS, image_weight=0.7
+    heatmap, original_image, colormap=cv2.COLORMAP_VIRIDIS, image_weight=0.7,heat_threshold = 0.6
 ):
     """
     Apply a heatmap (as an np.ndarray) on top of an original image.
@@ -162,7 +162,7 @@ def heatmap_area_display(
     
     ## ali - convert heatmap to mask
     heatmap_mask = np.ones(heatmap.shape)*0.6
-    heatmap_mask[heatmap>0.6] = 1
+    heatmap_mask[heatmap>heat_threshold] = 1
     
     #plot red outline around the mask
     ret, thresh = cv2.threshold((heatmap_mask * 255).astype("uint8"), 200, 255, 0)

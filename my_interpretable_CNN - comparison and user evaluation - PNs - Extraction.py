@@ -64,13 +64,13 @@ parser.add_argument('--filter_visualization' ,default = True) # find top k highe
 # CF model args
 parser.add_argument('--train_counterfactual_net' ,default = False)## 
 parser.add_argument('--choose_subclass' ,default = False, type=np.bool)## choose subclass for training on
-parser.add_argument('--counterfactual_PP' ,default = True)## whether to generate filters for PP  or PN case 
+parser.add_argument('--counterfactual_PP' ,default = False)## whether to generate filters for PP  or PN case 
 parser.add_argument('--resume_counterfactual_net' ,default = False)## False = train CF model from scratch; True = resume training CF model
 parser.add_argument('--test_counterfactual_net' ,default = False)## 
 parser.add_argument('--load_counterfactual_net',default = True)
 parser.add_argument('--resume', default =True) # load saved weights for base model
-parser.add_argument('--alter_class', default = 170, type = np.int32) # alter class #misclassified classes 9-170
-parser.add_argument('--analysis_class', default = 170, type = np.int32) # class for which images are loaded and analyzed
+parser.add_argument('--alter_class', default = 9, type = np.int32) # alter class #misclassified classes 9-170
+parser.add_argument('--analysis_class', default = 9, type = np.int32) # class for which images are loaded and analyzed
 parser.add_argument('--find_global_filters', default = False) # perform statistical analysis to find the activation magnitude of all filters for the alter class and train images of alter class
 parser.add_argument('--alter_class_2', default = 0, type = np.int32) # alter class for 2nd example, 9, 170, 25, 125, 108
 parser.add_argument('--cfe_epochs', default = 30, type = np.int32 ) #100 for mnist, 200 for CUB
@@ -209,6 +209,9 @@ elif args.dataset == 'CUB200':
     if official_split:
         data_dir =base_path+'/train_test_split/train/'
         data_dir_test =base_path+'/train_test_split/test/'
+
+        data_dir_user_evaluation ='E:/Medical Imaging Diagnostic (MID) Lab/XAI in MID/Paper submission/Version_2_Elsevier_KBS_format/Revision 1/user evaluation/images for comparison/'
+
         label_map = np.loadtxt(fname=base_path + '/classes.txt',dtype='str')
         label_map = label_map[:,1].tolist()
         print('using official split')
@@ -433,6 +436,28 @@ if args.dataset != 'mnist':
                             interpolation='nearest',
                             classes = [label_map[args.alter_class]] if (args.train_counterfactual_net and args.choose_subclass) else label_map)#['cat', 'dog'])
 
+            test_gen_user_eval  = imgDataGen_official_split.flow_from_directory(data_dir_user_evaluation,
+                            target_size=(input_shape[1], input_shape[2]),
+                            color_mode='rgb',
+                            class_mode='categorical',
+                            batch_size=batch_size,
+                            shuffle=False,
+                            seed=111,
+                            #subset='validation',
+                            interpolation='nearest',#)
+                            classes = [label_map[args.alter_class]] if (args.train_counterfactual_net and args.choose_subclass) else label_map)#['cat', 'dog'])
+
+            imgDataGen_official_split_nopreprocess = ImageDataGenerator(rescale = 1./255)
+            test_gen_user_eval_nopreprocess  = imgDataGen_official_split_nopreprocess.flow_from_directory(data_dir_user_evaluation,
+                            target_size=(input_shape[1], input_shape[2]),
+                            color_mode='rgb',
+                            class_mode='categorical',
+                            batch_size=batch_size,
+                            shuffle=False,
+                            seed=111,
+                            #subset='validation',
+                            interpolation='nearest',
+                            classes = [label_map[args.alter_class]] if (args.train_counterfactual_net and args.choose_subclass) else label_map)#['cat', 'dog'])
     elif args.dataset == 'cxr1000':
         train_gen, test_gen, valid_gen = load_cxr_dataset(train_df, test_df, valid_df, all_labels, batch_size,preprocess_input,augment=0)
         
@@ -1592,7 +1617,10 @@ if True:
         test_gen =train_gen if args.find_global_filters else actual_test_gen# train_gen#actual_test_gen
         test_gen_nopreprocess = train_gen_nopreprocess if args.find_global_filters else actual_test_gen_nopreprocess #train_gen_nopreprocess[0]#actual_test_gen_nopreprocess
         print("using traingen gen data") if args.find_global_filters else print("using testgen gen data")
-    gen=test_gen
+    # gen=test_gen
+    gen=test_gen_user_eval
+    test_gen_nopreprocess = test_gen_user_eval_nopreprocess
+    
     batches=math.ceil(gen.n/gen.batch_size)
     
     #print('important_filters for class 0:', important_filters_1)
@@ -1697,21 +1725,30 @@ if True:
                     
 
             y_gt = y_batch_test[img_ind]
+            alter_class_list = np.array([25,108,9,9,9,9,170,170,125,125])
             
+            ######################
+            class_for_analysis = np.argmax(y_gt)
+            alter_class = alter_class_list[img_ind]
+            
+            args.alter_class = alter_class
+            ######################
+
              #skip other class        
             if class_for_analysis==np.argmax(y_gt):
                 pass
                 print('\n\nimg_ind:',actual_img_ind)
             else:
-                continue
+                pass
+                # continue
             
-            # if args.counterfactual_PP:
-            #     mode = '' 
-            #     print("Loading CF model for PPs")
-            # else:
-            #     mode = 'PN_'
-            #     print("Loading CF model for PNs")
-            # combined.load_weights(filepath=weights_path+'/'+mode+'counterfactual_combined_model_fixed_'+str(label_map[args.alter_class])+'_alter_class.hdf5')
+            if args.counterfactual_PP:
+                mode = '' 
+                print("Loading CF model for PPs")
+            else:
+                mode = 'PN_'
+                print("Loading CF model for PNs")
+            combined.load_weights(filepath=weights_path+'/'+mode+'counterfactual_combined_model_fixed_'+str(label_map[alter_class])+'_alter_class.hdf5')
 
             # statistical_analysis = True #global statistics for alter class images only
             if args.find_global_filters:
@@ -2074,9 +2111,9 @@ if True:
             if check_PN:
                print("\nChecking PNs") 
 
-            analyze_img_filters=False
+            analyze_img_filters=True
             
-            analyze_img_filters = int(input("analyze filters on the input image?"))
+            # analyze_img_filters = int(input("analyze filters on the input image?"))
             
             if analyze_img_filters:
                 weighted_activation_magnitudes = c_modified_mean_fmap_activations[0]*W[:,alter_class] #w.r.t alter class
@@ -2107,6 +2144,7 @@ if True:
                     top_3_filters = np.argsort(PN_add[0])[-5:][::-1]#top 3 filters to which largest addition is made
                 PP_filter_list = np.where(filters_off[0]>0)#same for PP or PN
 
+                continue
                 filter_visualization_same_image(model,combined, x_batch_test[img_ind],actual_img_ind,top_3_filters, args,show_images=False, gradCAM=True, RF = True, combined_heatmaps = False)
                 
             #sys.exit()
@@ -2114,7 +2152,7 @@ if True:
             #%% filter visualization on class specific or all images
             #sort by just magnitude or weighted magnitude?
             analyze_filters=False
-            analyze_filters = int(input("analyze image filters?"))
+            # analyze_filters = int(input("analyze image filters?"))
             
             if analyze_filters:
                 weighted_activation_magnitudes = c_modified_mean_fmap_activations[0]*W[:,alter_class] #w.r.t alter class
@@ -2171,7 +2209,7 @@ if True:
             #sys.exit()
 #%%
             select_analyze_filters=False
-            select_analyze_filters = int(input("analyze some selected filters?"))
+            # select_analyze_filters = int(input("analyze some selected filters?"))
             
             if select_analyze_filters:
                 selected_filter = [int(input("choose filter:"))]
@@ -2188,7 +2226,7 @@ if True:
             
             #%% disable individual filter only
             disable_one_filter=False
-            disable_one_filter = int(input("disable chosen filters individually?"))
+            # disable_one_filter = int(input("disable chosen filters individually?"))
             
             if disable_one_filter:
                 #one_filter = int(input("choose filter to disbale:"))
@@ -2217,7 +2255,7 @@ if True:
             
             #%% model accuracy on disabled filters 
             find_model_accuracy=False
-            find_model_accuracy = int(input("find model accuracy on disabled filters?"))
+            # find_model_accuracy = int(input("find model accuracy on disabled filters?"))
             
             if find_model_accuracy:
                 enabled_filters = np.ones(512)
@@ -2647,645 +2685,4 @@ if True:
                 print(' ')
             #break
         #break
-#%% check indivual filter gradCAM?
-img_ind=2
-alter_prediction,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,pre_softmax = combined(np.expand_dims(x_batch_test[img_ind],0))
-
-fmatrix = np.zeros_like(fmatrix)
-fmatrix[:,355] =1#286, 355, 41
-
-pred_probs,fmaps,mean_fmaps,modified_mean_fmap_activations,pre_softmax = model([np.expand_dims(x_batch_test[img_ind],0),fmatrix], training=False)#with eager
-
-important_filters_1 = np.where(mean_fmaps[0,:]>=30)
-important_filters_2 = np.where(modified_mean_fmap_activations[0,:]>=15)
-
-#pred_probs,fmaps_x1,fmaps_x2,target_1,target_2,raw_map,forward_1 = model(np.expand_dims(x_batch_test[img_ind],0),y_batch_test[img_ind])#with eager
-print('predicted: ',label_map[np.argmax(pred_probs)], ' with prob: ',np.max(pred_probs)*100,'%')
-print ('actual: ', label_map[np.argmax(y_gt)], ' with prob: ',pred_probs[0][np.argmax(y_gt)].numpy()*100,'%')
-
-plt.plot(mean_fmaps[0]), plt.title('mean_fmaps'),plt.show()
-plt.plot(modified_mean_fmap_activations[0]), plt.title('modified_mean_fmap_activations'),plt.show()
-
-output = explainer.explain((np.expand_dims(x_batch_test[img_ind],0),None),model,np.argmax(y_batch_test[img_ind]),image_nopreprocessed=np.expand_dims(x_batch_test_nopreprocess[img_ind],0),fmatrix=fmatrix)
-
-plt.imshow(output), plt.axis('off'), plt.title('modified prediction')
-plt.show()
-plt.imshow(x_batch_test_nopreprocess[img_ind]), plt.axis('off'), plt.title('original image')
-plt.show()
-
-#%% check product sum idea
-#pred_probs,fmaps,mean_fmaps,modified_mean_fmap_activations = model([np.expand_dims(x_batch_test[img_ind],0),fmatrix], training=False)#with eager
-
-W = model.weights[-2]
-b = model.weights[-1]
-modified_mean_fmap_activations
-
-# match this score --> numpy=array([[0.25339222, 0.7466078 ]] for cat img_ind =0
-
-#fmap shape = 1x512
-# W shape   = 512 x 2
-# b shape   = 2
-
-prod_sum1 = np.sum(tf.multiply(modified_mean_fmap_activations,W[:,0])) + b[0]
-prod_sum2 = np.sum(tf.multiply(modified_mean_fmap_activations,W[:,1])) + b[1]
-
-print('prod_sum1:',prod_sum1)
-print('prod_sum2:', prod_sum2)
-
-softmx = tf.keras.activations.softmax(tf.convert_to_tensor(np.reshape([prod_sum1,prod_sum2],(1,2))))
-print('my softmax',softmx)
-#%% full test set result
-model = modified_model
-batches=math.ceil(test_gen.n/test_gen.batch_size)
-test_gen.reset()
-#for step,(x_batch_train, y_batch_train) in enumerate(dataset):
-with tqdm(total=batches, file=sys.stdout) as progBar:
-    for step in range(batches):
-      x_batch_test, y_batch_test = next(test_gen)
-      
-      probs = test_step(x_batch_test, y_batch_test)
-      
-      progBar.set_postfix(loss=test_loss_metric.result().numpy(), acc=test_acc_metric.result().numpy())
-      progBar.update()
-        
-  
-     # Display metrics at the end of each epoch.
-    test_acc = test_acc_metric.result()
-    test_loss = test_loss_metric.result()
-print('\nTest loss:', test_loss.numpy())
-print('Test accuracy:', test_acc.numpy())
- 
-#%%
-x_batch_test,y_batch_test = next(test_gen)
-explainer = GradCAM()
-
-
-#%% check filter importance
-if (args.test_filter_importance and not args.save_filter_importance):
-    img_ind=14
-    model.load_weights(filepath=weights_path+'/model.hdf5')
-    
-    if args.full_standard:
-        pred_probs = model(np.expand_dims(x_batch_test[img_ind],0),y_batch_test[img_ind])#with eager
-    else:
-        pred_probs,fmaps_x1,fmaps_x2,target_1,target_2,raw_map,forward_1 = model(np.expand_dims(x_batch_test[img_ind],0),y_batch_test[img_ind])#with eager
-
-
-    y_gt = y_batch_test[img_ind]
-    
-    plt.figure(figsize = (20,2))
-    plt.imshow(x_batch_test[img_ind].squeeze(),cmap='gray')
-    plt.axis('off')
-    plt.show()
-    print('predicted: ',label_map[np.argmax(pred_probs)], ' with prob: ',np.max(pred_probs)*100,'%')
-    print ('actual: ', label_map[np.argmax(y_gt)])
-    
-    original_prob=np.max(pred_probs)
-    test_filter_importance(model,weights_path,x_batch_test[img_ind],y_batch_test[img_ind],label_map,original_prob,img_ind)
-    
-    ##%% in-code method to modify filters 
-    test_filter_importance_in_code_method(model,weights_path,x_batch_test[img_ind],y_batch_test[img_ind],label_map,original_prob,img_ind)
-      
-
-#%% save filter importance
-for i in range(len(model.weights)):
-      print(len(model.weights)-i,  model.weights[i].shape)
-#%% test in batch
-if (args.save_filter_importance and True):
-    #class_for_analysis = 0
-    #print ('class for analysis: ', label_map[class_for_analysis])
-    trainSplit = False# train or test split
-    
-    
-    if trainSplit:
-        batches=math.ceil(train_gen.n/train_gen.batch_size)
-    
-        train_gen.reset() #resets batch index to 0
-        gen=train_gen
-    else:
-        batches=math.ceil(test_gen.n/test_gen.batch_size)
-    
-        test_gen.reset() #resets batch index to 0
-        gen=test_gen
-    
-
-    img_count=0
-    for k in range(batches):
-        
-        x_batch_test,y_batch_test = next(gen)
-        
-        if gen.batch_index<=102:
-            print('skipping batch:',gen.batch_index)
-            continue #first batch already saved
-        
-        model.load_weights(filepath=weights_path+'/model.hdf5')  
-        if args.full_standard:
-            pred_probs, fmaps = model(x_batch_test,y_batch_test)#with eager
-        else:
-            pred_probs,fmaps_x1,fmaps_x2,target_1,target_2,raw_map,forward_1 = model(x_batch_test,y_batch_test)#with eager
-       
-        original_prob = np.max(pred_probs,axis=1)
-        class_specific_prob = pred_probs#[0][np.argmax(y_batch_test,axis=1)].numpy()
-        
-
-        class_specific_matrix,class_specific_stats,class_specific_delta_matrix = save_filter_importance_batch(model,weights_path,x_batch_test,y_batch_test,label_map,original_prob,class_specific_prob,args)
-        
-        for i in range(len(x_batch_test)):
-            #class-specific
-            img_ind = i #3 (in batch)
-            actual_img_ind = i + (gen.batch_index-1)*gen.batch_size
-            
-            y_gt = y_batch_test[img_ind]
-            
-            save_path = filter_data_path+'/'+ str(np.argmax(y_gt))
-            if trainSplit:
-                save_path+=' - train_split'
-            else:
-                save_path+=' - test_split'
-                
-            if not os.path.exists(save_path):
-                os.makedirs(save_path)
-
-            img_count+=1
-            if os.path.exists(path=save_path+'/'+str(actual_img_ind)+'_matrix_class_specific.npy'):
-                continue
-            print('\n\nimg_ind:',actual_img_ind, 'img_count:',img_count)
-        
-            np.save(file=save_path+'/'+str(actual_img_ind)+'_matrix_class_specific.npy',arr=class_specific_matrix[i,:],allow_pickle=True)
-            np.save(file=save_path+'/'+str(actual_img_ind)+'_stats_class_specific.npy',arr=class_specific_stats[i,:],allow_pickle=True)
-            np.save(file=save_path+'/'+str(actual_img_ind)+'_delta_matrix_class_specific.npy',arr=class_specific_delta_matrix[i,:],allow_pickle=True)
-               
-       
-      
-#%%
-if (args.save_filter_importance and False):
-    class_for_analysis = 0
-    print ('class for analysis: ', label_map[class_for_analysis])
-    trainSplit = False# train or test split
-    
-    save_path = filter_data_path+'/'+ str(class_for_analysis)
-
-    if trainSplit:
-        save_path+=' - train_split'
-        batches=math.ceil(train_gen.n/train_gen.batch_size)
-    
-        train_gen.reset() #resets batch index to 0
-        gen=train_gen
-    else:
-        save_path+=' - test_split'
-        batches=math.ceil(test_gen.n/test_gen.batch_size)
-    
-        test_gen.reset() #resets batch index to 0
-        gen=test_gen
- 
-    batches=math.ceil(test_gen.n/test_gen.batch_size)
-    
-    test_gen.reset() #resets batch index to 0
-    img_count=0
-    for k in range(batches):
-        
-        x_batch_test,y_batch_test = next(test_gen)
-        
-        for i in range (len(x_batch_test)):
-            img_ind = i #3 (in batch)
-            actual_img_ind = i + (test_gen.batch_index-1)*test_gen.batch_size
-
-            y_gt = y_batch_test[img_ind]
-            
-            if np.argmax(y_gt) == class_for_analysis:
-                img_count+=1
-                if os.path.exists(path=save_path+'/'+str(actual_img_ind)+'_matrix_class_specific.npy'):
-                    continue
-                print('\n\nimg_ind:',actual_img_ind, 'img_count:',img_count)
-            else:
-                continue
-    
-            model.load_weights(filepath=weights_path+'/model.hdf5')  
-            if args.full_standard:
-                pred_probs = model(np.expand_dims(x_batch_test[img_ind],0),y_batch_test[img_ind])#with eager
-            else:
-                pred_probs,fmaps_x1,fmaps_x2,target_1,target_2,raw_map,forward_1 = model(np.expand_dims(x_batch_test[img_ind],0),y_batch_test[img_ind])#with eager
-            
-            # plt.figure(figsize = (20,2))
-            # plt.imshow(x_batch_test[img_ind].squeeze(),cmap='gray')
-            # plt.axis('off')
-            # plt.show()
-            print('predicted: ',label_map[np.argmax(pred_probs)], ' with prob: ',np.max(pred_probs)*100,'%')
-            
-            original_prob = np.max(pred_probs)
-            class_specific_prob = pred_probs[0][np.argmax(y_gt)].numpy()
-        
-            print ('actual: ', label_map[np.argmax(y_gt)], ' with prob: ',class_specific_prob*100,'%\n\n')
-        
-            ##%% in loop individually
-            argMax_matrix,argMax_pred_class,argMax_stats,argMax_delta_matrix, class_specific_matrix,class_specific_stats,class_specific_delta_matrix = save_filter_importance(model,weights_path,x_batch_test[img_ind],y_batch_test[img_ind],label_map,original_prob,class_specific_prob,actual_img_ind,args,save_path)
-            
-            #plot_filter_importance(class_specific_delta_matrix,class_specific_stats)
-#%%
-if args.save_filter_fmap:
-    class_for_analysis = 0
-    print ('class for analysis: ', label_map[class_for_analysis])
-    save_path = './create_training_data/fmaps/'+ str(class_for_analysis)
-    if not os.path.exists(save_path):
-        os.makedirs(save_path) 
-    batches=math.ceil(test_gen.n/test_gen.batch_size)
-    
-    model.load_weights(filepath=weights_path+'/model.hdf5')    
-
-    test_gen.reset() #resets batch index to 0
-    img_count=0
-    for k in range(batches):
-        
-        x_batch_test,y_batch_test = next(test_gen)
-        
-        for i in range (len(x_batch_test)):
-            img_ind = i #3 (in batch)
-            actual_img_ind = i + (test_gen.batch_index-1)*test_gen.batch_size
-
-            y_gt = y_batch_test[img_ind]
-            
-            if np.argmax(y_gt) == class_for_analysis:
-                img_count+=1
-                if os.path.exists(path=save_path+'/'+str(actual_img_ind)+'_fmaps_class_specific.npy'):
-                    continue
-                print('\n\nimg_ind:',actual_img_ind, 'img_count:',img_count)
-            else:
-                continue
-    
-            pred_probs,fmaps_x1,fmaps_x2,target_1,target_2,raw_map,forward_1 = model(np.expand_dims(x_batch_test[img_ind],0),y_batch_test[img_ind])#with eager
-            
-            #plt.figure(figsize = (20,2))
-            #plt.imshow(x_batch_test[img_ind].squeeze(),cmap='gray')
-            #plt.axis('off')
-            #plt.show()
-            print('predicted: ',label_map[np.argmax(pred_probs)], ' with prob: ',np.max(pred_probs)*100,'%')
-            
-            original_prob = np.max(pred_probs)
-            class_specific_prob = pred_probs[0][np.argmax(y_gt)].numpy()
-        
-            print ('actual: ', label_map[np.argmax(y_gt)], ' with prob: ',class_specific_prob*100,'%\n\n')
-
-            np.save(file=save_path+'/'+str(actual_img_ind)+'_fmap_class_specific.npy',arr=fmaps_x2,allow_pickle=True)
-            
-            plot_fmap=False
-            if plot_fmap:
-                fig, axs = plt.subplots(8,4, figsize=(15, 15))#, facecolor='w', edgecolor='k')
-                #fig.subplots_adjust(hspace = .5, wspace=.001)
-                
-                axs = axs.ravel()
-                
-                for i in range(32):
-                
-                    axs[i].imshow(fmaps_x2[0,:,:,i],cmap='gray')#contourf(np.random.rand(10,10),5,cmap=plt.cm.Oranges)
-                    axs[i].axis('off')
-                    
-                plt.show()
-          
-#%% analyze_filter_importance
-if args.analyze_filter_importance:
-    class_for_analysis = 0
-    print ('class for analysis: ', label_map[class_for_analysis])
-
-    #save_path = './create_training_data/'+ str(class_for_analysis)
-    save_path = './create_training_data/'+args.model+args.dataset+'/standard/'+ str(class_for_analysis) +' - test_split'
-    
-    save_path_fmap = './create_training_data/fmaps/'+ str(class_for_analysis)+' - test_split'
-    batches=math.ceil(test_gen.n/test_gen.batch_size)
-    
-    test_gen.reset() #resets batch index to 0
-    for k in range(batches):
-        x_batch_test,y_batch_test = next(test_gen)
-
-        #if test_gen.batch_index<=78:
-        #    print('skipping batch:',test_gen.batch_index)
-        #    continue #first batch already saved-
-        for i in range (len(x_batch_test)):
-            img_ind = i#3
-            actual_img_ind = i + (test_gen.batch_index-1)*test_gen.batch_size
-
-            y_gt = y_batch_test[img_ind]
-            
-
-            #load saved arrays        
-            if os.path.exists(path=save_path+'/'+str(actual_img_ind)+'_delta_matrix_class_specific.npy'):
-                print('img_ind:',actual_img_ind)
-            else:
-                continue
-            
-            # plt.figure(figsize = (20,2))
-            # plt.imshow(x_batch_test[img_ind].squeeze(),cmap='gray')
-            # plt.axis('off')
-            # plt.show()
-                     
-            model.load_weights(filepath=weights_path+'/model.hdf5')    
-            pred_probs, fmaps = model(np.expand_dims(x_batch_test[img_ind],0),y_batch_test[img_ind])#with eager
-#            pred_probs,fmaps_x1,fmaps_x2,target_1,target_2,raw_map,forward_1 = model(np.expand_dims(x_batch_test[img_ind],0),y_batch_test[img_ind])#with eager
-            print('predicted: ',label_map[np.argmax(pred_probs)], ' with prob: ',np.max(pred_probs)*100,'%')
-            print ('actual: ', label_map[np.argmax(y_gt)], ' with prob: ',pred_probs[0][np.argmax(y_gt)].numpy()*100,'%\n\n')
-            
-            #class-specific
-            class_specific_matrix = np.load(file=save_path+'/'+str(actual_img_ind)+'_matrix_class_specific.npy',allow_pickle=True)
-            class_specific_stats = np.load(file=save_path+'/'+str(actual_img_ind)+'_stats_class_specific.npy',allow_pickle=True)
-            class_specific_delta_matrix = np.load(file=save_path+'/'+str(actual_img_ind)+'_delta_matrix_class_specific.npy',allow_pickle=True)
-    
-            # class_specific_fmap = np.load(file=save_path_fmap+'/'+str(actual_img_ind)+'_fmap_class_specific.npy',allow_pickle=True)
-            # act_sums = np.zeros((128)) 
-            # for m in range(class_specific_fmap.shape[3]):
-            #     act_sums[m]=np.sum(class_specific_fmap[:,:,:,m])
-                
-            #print('predicted: ',label_map[np.argmax(pred_probs)], ' with prob: ',np.max(pred_probs)*100,'%')
-            
-            #original_prob = np.max(pred_probs)
-            #class_specific_prob = pred_probs[0][np.argmax(y_gt)].numpy()
-        
-            #print ('actual: ', label_map[np.argmax(y_gt)], ' with prob: ',class_specific_prob*100,'%')
-                
-            plot_filter_importance(class_specific_delta_matrix,class_specific_stats)
-            #plt.plot(act_sums), plt.title('act_sums - layer 0 (top)'),plt.show()
-            if (img_ind==21 and False): #zero variance
-                pred_probs,fmaps_x1,fmaps_x2,target_1,target_2,raw_map,forward_1 = model(np.expand_dims(x_batch_test[img_ind],0),y_batch_test[img_ind])#with eager
-                fig, axs = plt.subplots(32,4, figsize=(15, 15))#, facecolor='w', edgecolor='k')
-                #fig.subplots_adjust(hspace = .5, wspace=.001)
-                
-                axs = axs.ravel()
-                
-                for i in range(128):
-                
-                    axs[i].imshow(fmaps_x2[0,:,:,i],cmap='gray')#contourf(np.random.rand(10,10),5,cmap=plt.cm.Oranges)
-                    axs[i].axis('off')
-                    
-                plt.show()
-                test_filter_importance_in_code_method(model,weights_path,x_batch_test[img_ind],y_gt,label_map,img_ind)
-#%% disable best filters in each layer
-test_gen.reset()
-test_gen.batch_index=0 
-x_batch_test,y_batch_test = next(test_gen)
-
-actual_img_ind = 3#3, 10,21, 27, (44 == 0 mean/variance case)
-
-img_ind = actual_img_ind -((test_gen.batch_index-1)*32)
-
-y_gt = y_batch_test[img_ind]
-
-model.load_weights(filepath=weights_path+'/model.hdf5')    
-pred_probs,fmaps_x1,fmaps_x2,target_1,target_2,raw_map,forward_1 = model(np.expand_dims(x_batch_test[img_ind],0),y_batch_test[img_ind])#with eager
-
-plt.figure(figsize = (20,2))
-plt.imshow(x_batch_test[img_ind].squeeze(),cmap='gray')
-plt.axis('off')
-plt.show()
-         
-print('predicted: ',label_map[np.argmax(pred_probs)], ' with prob: ',np.max(pred_probs)*100,'%')
-print('actual: ', label_map[np.argmax(y_gt)], ' with prob: ',pred_probs[0][np.argmax(y_gt)].numpy()*100,'%\n\n')
-
-class_for_analysis=0
-save_path = './create_training_data/'+ str(class_for_analysis)
-class_specific_matrix = np.load(file=save_path+'/'+str(actual_img_ind)+'_matrix_class_specific.npy',allow_pickle=True)
-class_specific_stats = np.load(file=save_path+'/'+str(actual_img_ind)+'_stats_class_specific.npy',allow_pickle=True)
-class_specific_delta_matrix = np.load(file=save_path+'/'+str(actual_img_ind)+'_delta_matrix_class_specific.npy',allow_pickle=True)
-
-
-plot_filter_importance(class_specific_delta_matrix,class_specific_stats)
-
-best_indexes=np.zeros((4,2))
-best_indexes[0][0] = class_specific_stats[0][3]
-best_indexes[1][0] = class_specific_stats[1][3]
-best_indexes[2][0] = class_specific_stats[2][3]
-best_indexes[3][0] = class_specific_stats[3][3]
-
-best_indexes[0][1] = class_specific_stats[0][2]
-best_indexes[1][1] = class_specific_stats[1][2]
-best_indexes[2][1] = class_specific_stats[2][2]
-best_indexes[3][1] = class_specific_stats[3][2]
-
-print(best_indexes)
-
-original_prob = np.max(pred_probs)
-class_specific_prob = pred_probs[0][np.argmax(y_gt)].numpy()
-
-check_top_filter_importance(model,weights_path,x_batch_test[img_ind],y_batch_test[img_ind],label_map,original_prob,class_specific_prob,actual_img_ind,best_indexes,args)
-
-
-#%% disable best filters from histogram in loop
-#TO be completed
-test_gen.reset()
-test_gen.batch_index=0 
-x_batch_test,y_batch_test = next(test_gen)
-
-actual_img_ind = 3#3, 10,21, 27, (44 == 0 mean/variance case)
-
-img_ind = actual_img_ind -((test_gen.batch_index-1)*32)
-
-y_gt = y_batch_test[img_ind]
-
-model.load_weights(filepath=weights_path+'/model.hdf5')    
-pred_probs,fmaps_x1,fmaps_x2,target_1,target_2,raw_map,forward_1 = model(np.expand_dims(x_batch_test[img_ind],0),y_batch_test[img_ind])#with eager
-
-plt.figure(figsize = (20,2))
-plt.imshow(x_batch_test[img_ind].squeeze(),cmap='gray')
-plt.axis('off')
-plt.show()
-         
-print('predicted: ',label_map[np.argmax(pred_probs)], ' with prob: ',np.max(pred_probs)*100,'%')
-print('actual: ', label_map[np.argmax(y_gt)], ' with prob: ',pred_probs[0][np.argmax(y_gt)].numpy()*100,'%\n\n')
-
-class_for_analysis=0
-save_path = './create_training_data/'+ str(class_for_analysis)
-class_specific_matrix = np.load(file=save_path+'/'+str(actual_img_ind)+'_matrix_class_specific.npy',allow_pickle=True)
-class_specific_stats = np.load(file=save_path+'/'+str(actual_img_ind)+'_stats_class_specific.npy',allow_pickle=True)
-class_specific_delta_matrix = np.load(file=save_path+'/'+str(actual_img_ind)+'_delta_matrix_class_specific.npy',allow_pickle=True)
-
-
-plot_filter_importance(class_specific_delta_matrix,class_specific_stats)
-
-best_indexes=np.zeros((4,2))
-best_indexes[0][0] = class_specific_stats[0][3]
-best_indexes[1][0] = class_specific_stats[1][3]
-best_indexes[2][0] = class_specific_stats[2][3]
-best_indexes[3][0] = class_specific_stats[3][3]
-
-best_indexes[0][1] = class_specific_stats[0][2]
-best_indexes[1][1] = class_specific_stats[1][2]
-best_indexes[2][1] = class_specific_stats[2][2]
-best_indexes[3][1] = class_specific_stats[3][2]
-
-print(best_indexes)
-
-original_prob = np.max(pred_probs)
-class_specific_prob = pred_probs[0][np.argmax(y_gt)].numpy()
-
-check_top_filter_importance(model,weights_path,x_batch_test[img_ind],y_batch_test[img_ind],label_map,original_prob,class_specific_prob,actual_img_ind,best_indexes,args)
-#%% disable worst filters in each layer
-test_gen.reset()
-test_gen.batch_index=1 
-x_batch_test,y_batch_test = next(test_gen)
-
-actual_img_ind = 44#3, 10,21, 27, 44
-
-img_ind = actual_img_ind -((test_gen.batch_index-1)*32)
-
-y_gt = y_batch_test[img_ind]
-
-model.load_weights(filepath=weights_path+'/model.hdf5')    
-pred_probs,fmaps_x1,fmaps_x2,target_1,target_2,raw_map,forward_1 = model(np.expand_dims(x_batch_test[img_ind],0),y_batch_test[img_ind])#with eager
-
-plt.figure(figsize = (20,2))
-plt.imshow(x_batch_test[img_ind].squeeze(),cmap='gray')
-plt.axis('off')
-plt.show()
-         
-print('predicted: ',label_map[np.argmax(pred_probs)], ' with prob: ',np.max(pred_probs)*100,'%')
-print ('actual: ', label_map[np.argmax(y_gt)], ' with prob: ',pred_probs[0][np.argmax(y_gt)].numpy()*100,'%\n\n')
-
-class_for_analysis=0
-save_path = './create_training_data/'+ str(class_for_analysis)
-class_specific_matrix = np.load(file=save_path+'/'+str(actual_img_ind)+'_matrix_class_specific.npy',allow_pickle=True)
-class_specific_stats = np.load(file=save_path+'/'+str(actual_img_ind)+'_stats_class_specific.npy',allow_pickle=True)
-class_specific_delta_matrix = np.load(file=save_path+'/'+str(actual_img_ind)+'_delta_matrix_class_specific.npy',allow_pickle=True)
-
-
-plot_filter_importance(class_specific_delta_matrix,class_specific_stats)
-
-worst_indexes=np.zeros((4,2))
-worst_indexes[0][0] = class_specific_stats[0][1]
-worst_indexes[1][0] = class_specific_stats[1][1]
-worst_indexes[2][0] = class_specific_stats[2][1]
-worst_indexes[3][0] = class_specific_stats[3][1]
-
-worst_indexes[0][1] = class_specific_stats[0][0]
-worst_indexes[1][1] = class_specific_stats[1][0]
-worst_indexes[2][1] = class_specific_stats[2][0]
-worst_indexes[3][1] = class_specific_stats[3][0]
-
-print(worst_indexes)
-
-original_prob = np.max(pred_probs)
-class_specific_prob = pred_probs[0][np.argmax(y_gt)].numpy()
-
-check_top_filter_importance(model,weights_path,x_batch_test[img_ind],y_batch_test[img_ind],label_map,original_prob,class_specific_prob,actual_img_ind,worst_indexes,args)
-#%% visual fmaps and gradCAMs
-if args.visualize_fmaps:
-    img_ind = np.random.randint(0,32)
-    img_ind=14#21 #21 27
-    #automobiles = 6,9
-    #trucks = 11,14,23,28
-    
-    #mnist 16, 10, 17
-    #cifar 9
-    #img_ind  =9,
-    #pred_probs,fmaps_x1,fmaps_x2,target_1,target_2 = model.predict(np.expand_dims(x_batch_test[img_ind],0))#without eager
-    #pred_probs,fmaps_x1,fmaps_x2,target_1,target_2 = model(np.expand_dims(x_batch_test[img_ind],0))#with eager
-    pred_probs,fmaps_x1,fmaps_x2,target_1,target_2,raw_map,forward_1 = model(x_batch_test,y_batch_test)#with eager
-    
-    
-    y_gt = y_batch_test[img_ind]
-    
-    plt.figure(figsize = (20,2))
-    plt.imshow(x_batch_test[img_ind].squeeze(),cmap='gray')
-    plt.axis('off')
-    plt.show()
-    print('predicted: ',label_map[np.argmax(pred_probs[img_ind])], ' with prob: ',np.max(pred_probs[img_ind])*100,'%')
-    print ('actual: ', label_map[np.argmax(y_gt)])
-    
-    # plt.imshow(fmaps_x2[img_ind,:,:,0],cmap='gray')
-    # plt.axis('off')
-    # plt.show()
-    
-    output = explainer.explain((np.expand_dims(x_batch_test[img_ind],0),None),model,np.argmax(y_batch_test[img_ind]))
-    
-    plt.imshow(output)
-    plt.axis('off')
-    plt.show()
-    #%%
-    output = explainer.explain((x_batch_test,None),model,np.argmax(y_batch_test))
-    
-    plt.imshow(output)
-    plt.axis('off')
-    plt.show()
-    
-    #%%
-    fig, axs = plt.subplots(8,4, figsize=(15, 15))#, facecolor='w', edgecolor='k')
-    #fig.subplots_adjust(hspace = .5, wspace=.001)
-    axs = axs.ravel()
-    for i in range(32):
-    
-        axs[i].imshow(raw_map[img_ind,:,:,i],cmap='gray')#contourf(np.random.rand(10,10),5,cmap=plt.cm.Oranges)
-        axs[i].axis('off')
-    
-    #plt.title('raw_map')    
-    plt.show()
-    
-    fig, axs = plt.subplots(8,4, figsize=(15, 15))#, facecolor='w', edgecolor='k')
-    #fig.subplots_adjust(hspace = .5, wspace=.001)
-    axs = axs.ravel()
-    for i in range(32):
-    
-        axs[i].imshow(forward_1[img_ind,:,:,i],cmap='gray')#contourf(np.random.rand(10,10),5,cmap=plt.cm.Oranges)
-        axs[i].axis('off')
-    
-    #plt.title('templates_1')    
-    plt.show()
-    
-    fig, axs = plt.subplots(8,4, figsize=(15, 15))#, facecolor='w', edgecolor='k')
-    #fig.subplots_adjust(hspace = .5, wspace=.001)
-    axs = axs.ravel()
-    for i in range(32):
-    
-        axs[i].imshow(fmaps_x1[img_ind,:,:,i],cmap='gray')#contourf(np.random.rand(10,10),5,cmap=plt.cm.Oranges)
-        axs[i].axis('off')
-    
-    #plt.title('masked_fmaps_x1')    
-    plt.show()
-    #%%
-    fig, axs = plt.subplots(8,4, figsize=(15, 15))#, facecolor='w', edgecolor='k')
-    #fig.subplots_adjust(hspace = .5, wspace=.001)
-    
-    axs = axs.ravel()
-    
-    for i in range(32):
-    
-        axs[i].imshow(fmaps_x2[img_ind,:,:,i],cmap='gray')#contourf(np.random.rand(10,10),5,cmap=plt.cm.Oranges)
-        axs[i].axis('off')
-        
-    plt.show()
-    
-    #%% analysis
-    if (args.interpretable and not args.fixed_classes):
-        activations_sum = model.activation_sums_2
-        class_sum =model.class_sums_2
-        filter_means = activations_sum/class_sum
-        check=model.filter_means
-        
-        filter_class = tf.argmax(filter_means,1)
-        image_class  = tf.argmax(y_batch_test,1)#y_batch_train#y_batch_test
-        print(filter_class)
-        print(image_class)
-        print(image_class[img_ind])
-    
-    
-    
-    #%% for fixed classes
-    
-    #
-    fig, axs = plt.subplots(32,4, figsize=(15, 15))#, facecolor='w', edgecolor='k')
-    #fig.subplots_adjust(hspace = .5, wspace=.001)
-    axs = axs.ravel()
-    for i in range(128):
-    
-        #axs[i].imshow(fmaps_x1[0,:,:,i],cmap='gray',vmin=0, vmax=1)#contourf(np.random.rand(10,10),5,cmap=plt.cm.Oranges)
-        axs[i].imshow(fmaps_x2[img_ind,:,:,i],cmap='gray')
-        axs[i].axis('off')
-    
-    #plt.title('templates_1')    
-    plt.show()
-    fig, axs = plt.subplots(32,4, figsize=(15, 15))#, facecolor='w', edgecolor='k')
-    #fig.subplots_adjust(hspace = .5, wspace=.001)
-    axs = axs.ravel()
-    for i in range(128):
-    
-        #axs[i].imshow(fmaps_x1[0,:,:,i],cmap='gray',vmin=0, vmax=1)#contourf(np.random.rand(10,10),5,cmap=plt.cm.Oranges)
-        axs[i].imshow(target_2[img_ind,:,:,i],cmap='gray')
-        axs[i].axis('off')
-    
-    #plt.title('templates_1')    
-    plt.show()
+sys.exit()

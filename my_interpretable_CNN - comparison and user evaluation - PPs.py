@@ -69,8 +69,8 @@ parser.add_argument('--resume_counterfactual_net' ,default = False)## False = tr
 parser.add_argument('--test_counterfactual_net' ,default = False)## 
 parser.add_argument('--load_counterfactual_net',default = True)
 parser.add_argument('--resume', default =True) # load saved weights for base model
-parser.add_argument('--alter_class', default = 170, type = np.int32) # alter class #misclassified classes 9-170
-parser.add_argument('--analysis_class', default = 170, type = np.int32) # class for which images are loaded and analyzed
+parser.add_argument('--alter_class', default = 9, type = np.int32) # alter class #misclassified classes 9-170
+parser.add_argument('--analysis_class', default = 9, type = np.int32) # class for which images are loaded and analyzed
 parser.add_argument('--find_global_filters', default = False) # perform statistical analysis to find the activation magnitude of all filters for the alter class and train images of alter class
 parser.add_argument('--alter_class_2', default = 0, type = np.int32) # alter class for 2nd example, 9, 170, 25, 125, 108
 parser.add_argument('--cfe_epochs', default = 30, type = np.int32 ) #100 for mnist, 200 for CUB
@@ -209,6 +209,9 @@ elif args.dataset == 'CUB200':
     if official_split:
         data_dir =base_path+'/train_test_split/train/'
         data_dir_test =base_path+'/train_test_split/test/'
+
+        data_dir_user_evaluation ='E:/Medical Imaging Diagnostic (MID) Lab/XAI in MID/Paper submission/Version_2_Elsevier_KBS_format/Revision 1/user evaluation/images for comparison/'
+
         label_map = np.loadtxt(fname=base_path + '/classes.txt',dtype='str')
         label_map = label_map[:,1].tolist()
         print('using official split')
@@ -433,6 +436,28 @@ if args.dataset != 'mnist':
                             interpolation='nearest',
                             classes = [label_map[args.alter_class]] if (args.train_counterfactual_net and args.choose_subclass) else label_map)#['cat', 'dog'])
 
+            test_gen_user_eval  = imgDataGen_official_split.flow_from_directory(data_dir_user_evaluation,
+                            target_size=(input_shape[1], input_shape[2]),
+                            color_mode='rgb',
+                            class_mode='categorical',
+                            batch_size=batch_size,
+                            shuffle=False,
+                            seed=111,
+                            #subset='validation',
+                            interpolation='nearest',#)
+                            classes = [label_map[args.alter_class]] if (args.train_counterfactual_net and args.choose_subclass) else label_map)#['cat', 'dog'])
+
+            imgDataGen_official_split_nopreprocess = ImageDataGenerator(rescale = 1./255)
+            test_gen_user_eval_nopreprocess  = imgDataGen_official_split_nopreprocess.flow_from_directory(data_dir_user_evaluation,
+                            target_size=(input_shape[1], input_shape[2]),
+                            color_mode='rgb',
+                            class_mode='categorical',
+                            batch_size=batch_size,
+                            shuffle=False,
+                            seed=111,
+                            #subset='validation',
+                            interpolation='nearest',
+                            classes = [label_map[args.alter_class]] if (args.train_counterfactual_net and args.choose_subclass) else label_map)#['cat', 'dog'])
     elif args.dataset == 'cxr1000':
         train_gen, test_gen, valid_gen = load_cxr_dataset(train_df, test_df, valid_df, all_labels, batch_size,preprocess_input,augment=0)
         
@@ -1592,7 +1617,10 @@ if True:
         test_gen =train_gen if args.find_global_filters else actual_test_gen# train_gen#actual_test_gen
         test_gen_nopreprocess = train_gen_nopreprocess if args.find_global_filters else actual_test_gen_nopreprocess #train_gen_nopreprocess[0]#actual_test_gen_nopreprocess
         print("using traingen gen data") if args.find_global_filters else print("using testgen gen data")
-    gen=test_gen
+    # gen=test_gen
+    gen=test_gen_user_eval
+    test_gen_nopreprocess = test_gen_user_eval_nopreprocess
+    
     batches=math.ceil(gen.n/gen.batch_size)
     
     #print('important_filters for class 0:', important_filters_1)
@@ -1697,21 +1725,30 @@ if True:
                     
 
             y_gt = y_batch_test[img_ind]
+            alter_class_list = np.array([25,108,9,9,9,9,170,170,125,125])
             
+            ######################
+            class_for_analysis = np.argmax(y_gt)
+            alter_class = class_for_analysis#alter_class_list[img_ind]
+            
+            args.alter_class = class_for_analysis
+            ######################
+
              #skip other class        
             if class_for_analysis==np.argmax(y_gt):
                 pass
                 print('\n\nimg_ind:',actual_img_ind)
             else:
-                continue
+                pass
+                # continue
             
-            # if args.counterfactual_PP:
-            #     mode = '' 
-            #     print("Loading CF model for PPs")
-            # else:
-            #     mode = 'PN_'
-            #     print("Loading CF model for PNs")
-            # combined.load_weights(filepath=weights_path+'/'+mode+'counterfactual_combined_model_fixed_'+str(label_map[args.alter_class])+'_alter_class.hdf5')
+            if args.counterfactual_PP:
+                mode = '' 
+                print("Loading CF model for PPs")
+            else:
+                mode = 'PN_'
+                print("Loading CF model for PNs")
+            combined.load_weights(filepath=weights_path+'/'+mode+'counterfactual_combined_model_fixed_'+str(label_map[class_for_analysis])+'_alter_class.hdf5')
 
             # statistical_analysis = True #global statistics for alter class images only
             if args.find_global_filters:
@@ -2074,9 +2111,9 @@ if True:
             if check_PN:
                print("\nChecking PNs") 
 
-            analyze_img_filters=False
+            analyze_img_filters=True
             
-            analyze_img_filters = int(input("analyze filters on the input image?"))
+            # analyze_img_filters = int(input("analyze filters on the input image?"))
             
             if analyze_img_filters:
                 weighted_activation_magnitudes = c_modified_mean_fmap_activations[0]*W[:,alter_class] #w.r.t alter class
@@ -2114,7 +2151,7 @@ if True:
             #%% filter visualization on class specific or all images
             #sort by just magnitude or weighted magnitude?
             analyze_filters=False
-            analyze_filters = int(input("analyze image filters?"))
+            # analyze_filters = int(input("analyze image filters?"))
             
             if analyze_filters:
                 weighted_activation_magnitudes = c_modified_mean_fmap_activations[0]*W[:,alter_class] #w.r.t alter class
@@ -2171,7 +2208,7 @@ if True:
             #sys.exit()
 #%%
             select_analyze_filters=False
-            select_analyze_filters = int(input("analyze some selected filters?"))
+            # select_analyze_filters = int(input("analyze some selected filters?"))
             
             if select_analyze_filters:
                 selected_filter = [int(input("choose filter:"))]
@@ -2188,7 +2225,7 @@ if True:
             
             #%% disable individual filter only
             disable_one_filter=False
-            disable_one_filter = int(input("disable chosen filters individually?"))
+            # disable_one_filter = int(input("disable chosen filters individually?"))
             
             if disable_one_filter:
                 #one_filter = int(input("choose filter to disbale:"))
@@ -2217,7 +2254,7 @@ if True:
             
             #%% model accuracy on disabled filters 
             find_model_accuracy=False
-            find_model_accuracy = int(input("find model accuracy on disabled filters?"))
+            # find_model_accuracy = int(input("find model accuracy on disabled filters?"))
             
             if find_model_accuracy:
                 enabled_filters = np.ones(512)
@@ -2647,6 +2684,7 @@ if True:
                 print(' ')
             #break
         #break
+sys.exit()
 #%% check indivual filter gradCAM?
 img_ind=2
 alter_prediction,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,pre_softmax = combined(np.expand_dims(x_batch_test[img_ind],0))

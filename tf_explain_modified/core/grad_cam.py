@@ -25,11 +25,12 @@ class GradCAM:
         model,
         class_index,
         layer_name=None,
-        colormap=cv2.COLORMAP_JET,#COLORMAP_VIRIDIS,
+        colormap=cv2.COLORMAP_JET,#COLORMAP_VIRIDIS,COLORMAP_JET
         image_weight=0.7,
         image_nopreprocessed=None,# ali added,
         fmatrix = None,
-        RF=False
+        RF=False,
+		heatmap_threshold=0.6
     ):
         """
         Compute GradCAM for a specific class index.
@@ -68,7 +69,7 @@ class GradCAM:
             heatmaps = np.array(
             [
                 # not showing the actual image if image_weight=0
-                heatmap_area_display(cam.numpy(), image, colormap, image_weight)
+                heatmap_area_display(cam.numpy(), image, colormap, image_weight,heat_threshold=heatmap_threshold)
                 for cam, image in zip(cams, images)
             ]        )
         else:
