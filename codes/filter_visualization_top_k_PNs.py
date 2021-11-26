@@ -240,14 +240,14 @@ def filter_visualization_top_k_PNs(model,gen, top_k_fils, args,show_images,gradC
         filter_image_lists.append(np.asarray(image_list))
         
         for_user_evaluation=True
-        if for_user_evaluation and len(filter_image_lists)==top_k:
+        rng = np.random.default_rng()
+        if args.user_evaluation and len(filter_image_lists)==top_k:
             # plt.savefig(fname="./Comparison with SCOUT/"+str(img_number)+"_PN_filter_"+str(T)+".png", dpi=300, bbox_inches = 'tight')
             fig3, axs3 = plt.subplots(1, top_k,figsize=(10,3.2)) # figsize: (default: [6.4, 4.8]) Width, height in inches.
             
             for j in range(top_k):
-                np.random.seed(int(time.time()))
                 #randomly pick one of topk images for each filter
-                axs3[j].imshow(filter_image_lists[j][np.random.randint(3)]), axs3[j].axis('off'), axs3[j].set_title(str(top_k_fils[j]))
+                axs3[j].imshow(filter_image_lists[j][rng.integers(3)]), axs3[j].axis('off'), axs3[j].set_title(str(top_k_fils[j]))
             plt.savefig(fname="./Comparison with SCOUT/"+str(img_number)+"_PN_filters.png", dpi=300, bbox_inches = 'tight')
         
             # plt.show()

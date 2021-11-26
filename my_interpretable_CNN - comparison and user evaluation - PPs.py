@@ -61,6 +61,8 @@ parser.add_argument('--full_standard',default = True) # keep True for CFE work..
 parser.add_argument('--create_counterfactual_combined' ,default = True)## create CF model for a pretrained base model or train a new base model
 parser.add_argument('--filter_visualization' ,default = True) # find top k highest and lowest activation magnitudes for the target filter and the corresponding images
 
+parser.add_argument('--user_evaluation' ,default = True) # save images
+
 # CF model args
 parser.add_argument('--train_counterfactual_net' ,default = False)## 
 parser.add_argument('--choose_subclass' ,default = False, type=np.bool)## choose subclass for training on
