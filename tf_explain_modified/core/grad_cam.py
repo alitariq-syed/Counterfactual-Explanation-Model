@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import tensorflow as tf
 
-from tf_explain_modified.utils.display import grid_display, heatmap_display, heatmap_area_display
+from tf_explain_modified.utils.display import grid_display, heatmap_display, heatmap_area_display, heatmap_cutout_display
 from tf_explain_modified.utils.saver import save_rgb
 import matplotlib.pyplot as plt
 
@@ -30,7 +30,8 @@ class GradCAM:
         image_nopreprocessed=None,# ali added,
         fmatrix = None,
         RF=False,
-		heatmap_threshold=0.6
+		heatmap_threshold=0.6,
+        heatmap_cutout = False
     ):
         """
         Compute GradCAM for a specific class index.
@@ -66,12 +67,21 @@ class GradCAM:
             images = image_nopreprocessed
         
         if RF:
-            heatmaps = np.array(
-            [
-                # not showing the actual image if image_weight=0
-                heatmap_area_display(cam.numpy(), image, colormap, image_weight,heat_threshold=heatmap_threshold)
-                for cam, image in zip(cams, images)
-            ]        )
+            if not heatmap_cutout:
+                heatmaps = np.array(
+                [
+                    # not showing the actual image if image_weight=0
+                    heatmap_area_display(cam.numpy(), image, colormap, image_weight,heat_threshold=heatmap_threshold)
+                    for cam, image in zip(cams, images)
+                ]        )
+            else:
+                heatmaps = np.array(
+                [
+                    # not showing the actual image if image_weight=0
+                    heatmap_cutout_display(cam.numpy(), image, colormap, image_weight,heat_threshold=heatmap_threshold)
+                    for cam, image in zip(cams, images)
+                ]        )
+                
         else:
             heatmaps = np.array(
             [

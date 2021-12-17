@@ -24,8 +24,8 @@ def filter_visualization_top_k_PNs(model,gen, top_k_fils, args,show_images,gradC
     PN_count = 0
     
     filter_image_lists = []
+    filter_image_order_lists = []
     
-    break_all_loops = False
     for i in range(top_k):        
         
         T = top_k_fils[i]
@@ -124,6 +124,7 @@ def filter_visualization_top_k_PNs(model,gen, top_k_fils, args,show_images,gradC
     
         
         image_list = []
+        image_order_list = []
         for k in range(batches):
 
             
@@ -216,6 +217,7 @@ def filter_visualization_top_k_PNs(model,gen, top_k_fils, args,show_images,gradC
                         output_gradcam_alter,_ = explainer.explain((np.expand_dims(x_batch_test[i],0),None),model,target_class,image_nopreprocessed=np.expand_dims(img_post_process,0),fmatrix=np.expand_dims(default_fmatrix[i],0),image_weight=0.7, RF=RF)
                         axs2[order].imshow(output_gradcam_alter), axs2[order].axis('off'), axs2[order].set_title(str(target_fmaps[highest[order]]))
                         image_list.append(output_gradcam_alter)
+                        image_order_list.append(order)
                     else:
                         axs2[order].imshow(img_post_process), axs2[order].axis('off'), axs2[order].set_title(str(target_fmaps[highest[order]]))
     
@@ -238,18 +240,27 @@ def filter_visualization_top_k_PNs(model,gen, top_k_fils, args,show_images,gradC
         
         
         filter_image_lists.append(np.asarray(image_list))
+        filter_image_order_lists.append(np.asarray(image_order_list))
         
-        for_user_evaluation=True
+        # args.user_evaluation=True
+        #use random or top from the top 5 images for a single filter
+        use_random = True
         rng = np.random.default_rng()
         if args.user_evaluation and len(filter_image_lists)==top_k:
             # plt.savefig(fname="./Comparison with SCOUT/"+str(img_number)+"_PN_filter_"+str(T)+".png", dpi=300, bbox_inches = 'tight')
             fig3, axs3 = plt.subplots(1, top_k,figsize=(10,3.2)) # figsize: (default: [6.4, 4.8]) Width, height in inches.
             
             for j in range(top_k):
-                #randomly pick one of topk images for each filter
-                axs3[j].imshow(filter_image_lists[j][rng.integers(3)]), axs3[j].axis('off'), axs3[j].set_title(str(top_k_fils[j]))
+                if use_random:
+                    #randomly pick one of topk images for each filter
+                    axs3[j].imshow(filter_image_lists[j][rng.integers(3)]), axs3[j].axis('off'), axs3[j].set_title(str(top_k_fils[j]))
+                else:
+                    axs3[j].imshow(filter_image_lists[j][np.argmin(filter_image_order_lists[j])]), axs3[j].axis('off'), axs3[j].set_title(str(top_k_fils[j]))
             plt.savefig(fname="./Comparison with SCOUT/"+str(img_number)+"_PN_filters.png", dpi=300, bbox_inches = 'tight')
-        
+            # plt.savefig(fname="./Comparison with SCOUT/"+str(img_number)+"_missclassification_PN_filters.png", dpi=300, bbox_inches = 'tight')
+        # for iii in filter_image_lists:
+        #     for jjj in iii:
+        #         plt.imshow(jjj),plt.show()
             # plt.show()
         
         #TODO: plot in sorted order

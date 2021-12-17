@@ -51,7 +51,6 @@ from codes.support_functions import get_heatmap_only, restore_original_image_fro
 from codes.filter_visualization_top_k import filter_visualization_top_k
 from codes.filter_visualization_same_image import filter_visualization_same_image
 from codes.model_accuracy_with_disabled_filters import model_accuracy_filters
-from codes.filter_visualization_top_k_PNs import filter_visualization_top_k_PNs
 #%%
 KAGGLE = False
 parser = argparse.ArgumentParser(description='Interpretable CNN')
@@ -1860,7 +1859,7 @@ if True:
                 continue
             
            # #skip high confidence predictions
-            skip_high_confidence = False
+            skip_high_confidence = True
             if skip_high_confidence:
                 if pred_probs[0][np.argmax(y_gt)]>0.9:
                     print("skipping high confidence prediction")
@@ -2073,7 +2072,7 @@ if True:
 
             #%% filter visualization on same iimage
             #sort by just magnitude or weighted magnitude?
-            check_PN = False
+            check_PN = True
             if check_PN:
                print("\nChecking PNs") 
 
@@ -2106,6 +2105,7 @@ if True:
                         top_3_filters = np.array([376,  57, 193, 359, 190])#img 213                        
 
                         top_3_filters = top_3_filters[:top_k]
+                        top_3_filters = np.array([504,  399, 5])
                 else:
                     top_3_filters = np.argsort(PN_add[0])[-5:][::-1]#top 3 filters to which largest addition is made
                 PP_filter_list = np.where(filters_off[0]>0)#same for PP or PN
@@ -2122,7 +2122,7 @@ if True:
             if analyze_filters:
                 weighted_activation_magnitudes = c_modified_mean_fmap_activations[0]*W[:,alter_class] #w.r.t alter class
                 # weighted_activation_magnitudes = W[:,alter_class] #w.r.t alter class
-                sort_by_weighted_magnitude = False
+                sort_by_weighted_magnitude = True
                
                 top_k=3
                 if args.counterfactual_PP:
@@ -2137,11 +2137,12 @@ if True:
                         #top_3_filters = np.array([ 15, 330, 158, 213, 456])
                         #top_3_filters = np.array([ 44, 193, 376])#img 213                        
                         # top_3_filters = np.array([ 15, 158, 297])#img 214                        
-                        top_3_filters = np.array([ 44, 274, 131])#, 193, 401])#img 240
+                        # top_3_filters = np.array([ 44, 274, 131, 193, 401])#img 240
                         #top_3_filters = np.array([  57, 401, 399,  44, 361])#img 240 PN wrt 9
                         # top_3_filters = np.array([  376,  57, 193, 359, 190])#img 652 PN wrt 9
                         # top_3_filters = np.array([ 330,  15, 456, 158, 469])#img 652 PN wrt 9
-                        # top_3_filters = np.array([376,  57, 193, 359, 190])#img 213                        
+                        #top_3_filters = np.array([376,  57, 193, 359, 190])#img 213                        
+                        top_3_filters = np.array([504,  399, 5])
 
                         
                 else:
@@ -2164,11 +2165,7 @@ if True:
                     
                     
                 PP_filter_list = np.where(filters_off[0]>0)#same for PP or PN
-                
-                #for user evaluation
-                # filter_visualization_top_k_PNs(model,test_gen,top_3_filters,args,show_images=False, gradCAM=True, class_specific_top_k=True, RF = True,img_number=img_ind)
-                
-                k=5 #top k images
+                k=3 #top k images
                 for i in range(top_k):
                     filter_visualization_top_k(model,test_gen,top_3_filters[i],k,args,show_images=False, gradCAM=True, class_specific_top_k=True, RF = True)
                 

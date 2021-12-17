@@ -192,3 +192,68 @@ def heatmap_area_display(
     # )
 
     return output.astype("uint8")# cv2.cvtColor(output, cv2.COLOR_BGR2RGB)
+
+
+
+def heatmap_cutout_display(
+    heatmap, original_image, colormap=cv2.COLORMAP_VIRIDIS, image_weight=0.7,heat_threshold = 0.6
+):
+    """
+    Apply a heatmap (as an np.ndarray) on top of an original image.
+
+    Args:
+        heatmap (numpy.ndarray): Array corresponding to the heatmap
+        original_image (numpy.ndarray): Image on which we apply the heatmap
+        colormap (int): OpenCV Colormap to use for heatmap visualization
+        image_weight (float): An optional `float` value in range [0,1] indicating the weight of
+            the input image to be overlaying the calculated attribution maps. Defaults to `0.7`
+
+    Returns:
+        np.ndarray: Original image with heatmap applied
+    """
+    heatmap = cv2.resize(heatmap, (original_image.shape[1], original_image.shape[0]))
+
+    image = image_to_uint_255(original_image)
+
+    heatmap = (heatmap - np.min(heatmap)) / (heatmap.max() - heatmap.min())
+    
+    original_heatmap = (heatmap * 255).astype("uint8")
+    
+    #heatmap = cv2.applyColorMap(
+    #    cv2.cvtColor((heatmap * 255).astype("uint8"), cv2.COLOR_GRAY2BGR), colormap
+    #)
+    
+    ## ali - convert heatmap to mask
+    heatmap_mask = np.ones(heatmap.shape)*0.0
+    heatmap_mask[heatmap>heat_threshold] = 1
+    
+    #plot red outline around the mask
+    ret, thresh = cv2.threshold((heatmap_mask * 255).astype("uint8"), 200, 255, 0)
+    contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    
+    #in case 2d MNIST image
+    if len(image.shape) ==2:
+        #convert to 3d image
+        image = np.stack((image,)*3, axis=-1)
+        
+        #dont dim background of MNIST images
+        #output = image * heatmap_mask[:,:,np.newaxis]
+        output = image
+
+        #converted = cv2.cvtColor((heatmap * 255).astype("uint8"), cv2.COLOR_GRAY2BGR)
+        cv2.drawContours(output, contours, -1, (255,0,0), 3)
+        
+    else:
+        output = image * heatmap_mask[:,:,np.newaxis]
+        # cv2.drawContours(output, contours, -1, (255,0,0), 3)
+        # output = output+ (255-heatmap_mask)
+        
+
+    
+
+    # output = cv2.addWeighted(
+    #     cv2.cvtColor(image, cv2.COLOR_RGB2BGR), image_weight, heatmap, 1, 0
+    # )
+
+    return output.astype("uint8")# cv2.cvtColor(output, cv2.COLOR_BGR2RGB)

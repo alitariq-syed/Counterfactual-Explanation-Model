@@ -109,6 +109,10 @@ def filter_visualization_top_k(model,gen,T, top_k, args,show_images,gradCAM,clas
     fig, axs = plt.subplots(1, top_k,figsize=(15,3.2)) # figsize: (default: [6.4, 4.8]) Width, height in inches.
     fig2, axs2 = plt.subplots(1, top_k,figsize=(15,3.2))
     
+    # args.user_evaluation = True
+    if args.user_evaluation:
+        fig2, axs2 = plt.subplots(1, top_k,figsize=(10,3.2))
+    
     for k in range(batches):
         x_batch_test,y_batch_test = next(gen)
         
@@ -197,7 +201,11 @@ def filter_visualization_top_k(model,gen,T, top_k, args,show_images,gradCAM,clas
 
                 if gradCAM:
                     output_gradcam_alter,_ = explainer.explain((np.expand_dims(x_batch_test[i],0),None),model,target_class,image_nopreprocessed=np.expand_dims(img_post_process,0),fmatrix=np.expand_dims(default_fmatrix[i],0),image_weight=0.7, RF=RF)
-                    axs2[order].imshow(output_gradcam_alter), axs2[order].axis('off'), axs2[order].set_title(str(target_fmaps[highest[order]]))
+                    if args.user_evaluation:
+                        axs2[order].imshow(output_gradcam_alter), axs2[order].axis('off'), axs2[order].set_title(str(''))
+                    else:
+                        axs2[order].imshow(output_gradcam_alter), axs2[order].axis('off'), axs2[order].set_title(str(target_fmaps[highest[order]]))
+
                 else:
                     axs2[order].imshow(img_post_process), axs2[order].axis('off'), axs2[order].set_title(str(target_fmaps[highest[order]]))
 
@@ -220,6 +228,7 @@ def filter_visualization_top_k(model,gen,T, top_k, args,show_images,gradCAM,clas
     
     if args.user_evaluation:
         plt.savefig(fname="./Comparison with SCOUT/"+str(img_number)+"_PN_filter_"+str(T)+".png", dpi=300, bbox_inches = 'tight')
+        # plt.savefig(fname="./Comparison with SCOUT/"+str(img_number)+"_misclassification_filter_"+str(T)+".png", dpi=300, bbox_inches = 'tight')
 
     plt.show()
     
