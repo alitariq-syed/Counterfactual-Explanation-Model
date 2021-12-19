@@ -1888,8 +1888,8 @@ if True:
             if np.argmax(pred_probs) != np.argmax(y_gt) and True:
                 print("wrong prediction")
                 # incorrect_class=np.argmax(pred_probs)
-                print("skipping wrong prediction")
-                continue
+                # print("skipping wrong prediction")
+                # continue
             else:
                 pass
                 # print("skipping correct prediction")

@@ -96,7 +96,7 @@ def filter_visualization_same_image(model,combined,img,img_ind,filts, args,show_
         plt.imshow(img_post_process), plt.axis('off'), plt.savefig(fname="./Comparison with SCOUT/"+str(img_ind)+"_original.png", dpi=100, bbox_inches = 'tight')
         # plt.show()
 ########################
-        alter_class_list = np.array([25,108,9,9,9,9,170,170,125,125])
+        alter_class_list = np.array([25,108,9,9,9,9,170,170,125,125,9])
         default_fmatrix = np.ones((1, model.output[1].shape[3]))#512=generator.output.shape[1]
         heatmap_threshold = 0.8
         output_gradcam_original,_ = explainer.explain((np.expand_dims(img,0),None),model,class_index=alter_class_list[img_ind],image_nopreprocessed=np.expand_dims(img_post_process,0),fmatrix=np.expand_dims(default_fmatrix[0],0),image_weight=0.8, RF=False,heatmap_threshold=heatmap_threshold)
