@@ -104,8 +104,6 @@ def train_step(x_batch_test, alter_class, combined, W,base_model,L1_weight,PP_mo
     
         #combined_loss = W*counterfactual_loss + 1*l1_loss_PN#  #+ pre_softmax_loss #+ counterfactual_PN_loss#+ perturb_loss
         #2x for CUB
-        
-
     
     gradients = tape.gradient(combined_loss, combined.trainable_variables,unconnected_gradients='zero')
     optimizer.apply_gradients(zip(gradients, combined.trainable_variables))
@@ -123,7 +121,28 @@ def train_step(x_batch_test, alter_class, combined, W,base_model,L1_weight,PP_mo
     train_loss_metric_6(l1_loss_PN)
 
 
+@tf.function 
+def test_step(x_batch_test, alter_class, combined, W,base_model,L1_weight,PP_mode):
+    
+    alter_prediction,fmatrix,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax = combined(x_batch_test, training=False)
+    counterfactual_loss = loss_fn(alter_class, alter_prediction)
+    l1_loss_PP = L1_weight* my_l1_loss(fmatrix,0.001/1)
+    
+    pre_softmax_loss = my_l1_loss_pre_Softmax(pre_softmax[:,tf.argmax(alter_class,axis=1)[0]])
+      
+    test_loss_metric(counterfactual_loss)
+    test_loss_metric_2(l1_loss_PP)
+    test_loss_metric_3(pre_softmax_loss)
 
+    test_loss_metric_5(my_filter_count(fmatrix))
+    
+    test_acc_metric(alter_class, alter_prediction)
+    
+
+    test_acc_metric(alter_class, alter_prediction)
+    #return x1,x2,target1,target2
+    
+    
 #@tf.function 
 def train_step_experimental(x_batch_test, alter_class, combined, W,base_model):
     perturb_loss=True
@@ -172,19 +191,7 @@ def train_step_experimental(x_batch_test, alter_class, combined, W,base_model):
     train_acc_metric(alter_class, alter_prediction)
     #return x1,x2,target1,target2
 
-@tf.function 
-def test_step(x_batch_test, alter_class, combined):
-    
-    alter_prediction,fmatrix,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax = combined(x_batch_test, training=False)
-    counterfactual_loss = loss_fn(alter_class, alter_prediction)
-    l1_loss = my_l1_loss(fmatrix)
-    
-      
-    test_loss_metric(counterfactual_loss)
-    test_loss_metric_2(l1_loss)
 
-    test_acc_metric(alter_class, alter_prediction)
-    #return x1,x2,target1,target2
 
 
 #%%
@@ -357,12 +364,15 @@ def train_counterfactual_net(model,weights_path, generator, train_gen,test,resum
     else:
         #print('Testing...')
         if for_alter_class:
-            combined.load_weights(filepath=weights_path+'/counterfactual_combined_model_alter_class_epoch_29.hdf5')
+            # combined.load_weights(filepath=weights_path+'/counterfactual_combined_model_alter_class_epoch_29.hdf5')
+            combined.load_weights(filepath=weights_path+'/'+mode+'counterfactual_combined_model_fixed_'+str(label_map[args.alter_class])+'_alter_class.hdf5')
+
         else:
             combined.load_weights(filepath=weights_path+'/counterfactual_combined_model_same_class_epoch_29.hdf5')
 
         batches=math.ceil(train_gen.n/train_gen.batch_size)
         
+        Weight = 1
         #for step,(x_batch_train, y_batch_train) in enumerate(dataset):
         with tqdm(total=batches, file=sys.stdout) as progBar:
             for step in range(batches):
@@ -372,18 +382,28 @@ def train_counterfactual_net(model,weights_path, generator, train_gen,test,resum
               #commenting following line results in OOM error for unknown reasons
               predictions,fmaps,_ ,_,pre_softmax= model([x_batch_test,default_fmatrix], training=False)
               if for_alter_class:
-                  alter_class = 1-y_batch_test
+                if for_fixed_alter_class:
+                    alter_class = np.zeros_like(y_batch_test)
+                    alter_class[:,for_class] = 1
+                    #alter_class = y_batch_test#sanity check
+                else:
+                    alter_class = 1-y_batch_test
               else:
-                  alter_class = y_batch_test
-              probs = test_step(x_batch_test, alter_class,combined)
+                alter_class = y_batch_test
+
+              probs = test_step(x_batch_test, alter_class,combined,Weight,model,L1_weight,args.counterfactual_PP)
               
-              progBar.set_postfix(loss=[test_loss_metric.result().numpy(),test_loss_metric_2.result().numpy()], acc=test_acc_metric.result().numpy())
+              #progBar.set_postfix(loss=[train_loss_metric.result().numpy(),train_loss_metric_2.result().numpy(),train_loss_metric_3.result().numpy(),train_loss_metric_4.result().numpy(), train_loss_metric_5.result().numpy(),train_loss_metric_6.result().numpy()], acc=train_acc_metric.result().numpy(),refresh=False)
+              progBar.set_postfix(loss=[test_loss_metric.result().numpy(),test_loss_metric_2.result().numpy(),test_loss_metric_3.result().numpy(), test_loss_metric_5.result().numpy()], acc=test_acc_metric.result().numpy())
               progBar.update()
                 
           
              # Display metrics at the end of each epoch.
             test_acc = test_acc_metric.result()
             test_loss = test_loss_metric.result()
+            test_loss_metric_2.reset_states()
+            test_loss_metric_3.reset_states()
+            test_loss_metric_5.reset_states()            
         print('\nTest loss:', test_loss.numpy())
         print('Test accuracy:', test_acc.numpy())   
     return combined, generator

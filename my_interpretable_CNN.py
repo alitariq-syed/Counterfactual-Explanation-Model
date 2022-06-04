@@ -65,14 +65,14 @@ parser.add_argument('--filter_visualization' ,default = True) # find top k highe
 parser.add_argument('--user_evaluation' ,default = False) # save images
 
 # CF model args
-parser.add_argument('--train_counterfactual_net' ,default = False)## 
+parser.add_argument('--train_counterfactual_net' ,default = True)## 
 parser.add_argument('--choose_subclass' ,default = False, type=np.bool)## choose subclass for training on
 parser.add_argument('--counterfactual_PP' ,default = True)## whether to generate filters for PP  or PN case 
 parser.add_argument('--resume_counterfactual_net' ,default = False)## False = train CF model from scratch; True = resume training CF model
-parser.add_argument('--test_counterfactual_net' ,default = False)## 
+parser.add_argument('--test_counterfactual_net' ,default = True)## 
 parser.add_argument('--load_counterfactual_net',default = True)
 parser.add_argument('--resume', default =True) # load saved weights for base model
-parser.add_argument('--alter_class', default = 170, type = np.int32) # alter class #misclassified classes 9-170
+parser.add_argument('--alter_class', default = 9, type = np.int32) # alter class #misclassified classes 9-170
 parser.add_argument('--analysis_class', default = 9, type = np.int32) # class for which images are loaded and analyzed
 parser.add_argument('--find_global_filters', default = False) # perform statistical analysis to find the activation magnitude of all filters for the alter class and train images of alter class
 parser.add_argument('--alter_class_2', default = 0, type = np.int32) # alter class for 2nd example, 9, 170, 25, 125, 108
@@ -1322,6 +1322,7 @@ if (args.train_counterfactual_net or args.load_counterfactual_net):
         print("l1 weight: ", L1_weight)
         print("training CF model for alter class: ",label_map[for_class])
         #TODO: pass parameters using just args
+        #actual_test_gen train_gen
         combined, generator = train_counterfactual_net(model,weights_path, counterfactual_generator, train_gen,args.test_counterfactual_net, args.resume_counterfactual_net,epochs=cf_epochs,L1_weight=L1_weight,for_class=for_class,label_map=label_map,logging=logging,args=args) 
         #if logging: sys.stdout.close()        
         #sys.modules[__name__].__dict__.clear()
