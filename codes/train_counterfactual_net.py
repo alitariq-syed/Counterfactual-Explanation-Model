@@ -143,57 +143,6 @@ def test_step(x_batch_test, alter_class, combined, W,base_model,L1_weight,PP_mod
     #return x1,x2,target1,target2
     
     
-#@tf.function 
-def train_step_experimental(x_batch_test, alter_class, combined, W,base_model):
-    perturb_loss=True
-    explainer = GradCAM()
-    default_fmatrix = tf.ones((len(x_batch_test),512))#512=enerator.output.shape[1]
-
-    alter_prediction,fmatrix,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax = combined([x_batch_test], training=True) #2nd x_batch_test is dummy input in place of masked input
-    output,only_heatmaps = explainer.explain((x_batch_test,None),base_model,3,image_nopreprocessed=None,fmatrix=fmatrix,image_weight=0.0)#np.argmin(y_batch_test[img_ind])
-    masked_preprocessed = get_heatmap_only_batch(only_heatmaps,x_batch_test)        
-
-    with tf.GradientTape(persistent=False) as tape: #persistent=False  Boolean controlling whether a persistent gradient tape is created. False by default, which means at most one call can be made to the gradient() method on this object. 
-    
-        
-        #if perturb_loss:
-        #perturbed_probs, perturbed_fmaps, perturbed_mean_fmap, perturbed_modified_mean_fmap_activations,perturbed_pre_softmax = base_model([masked_preprocessed,default_fmatrix])#with eager
-        #perturbed_probs,per_fmatrix,per_fmaps,per_mean_fmap,per_modified_mean_fmap_activations,per_pre_softmax = combined(masked_preprocessed, training=True)
-        perturbed_probs,fmatrix,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax = combined([masked_preprocessed], training=True) #2nd x_batch_test is dummy input in place of masked input
-
-        #plt.imshow(masked_preprocessed), plt.axis('off'), plt.title('perturbed'),plt.show()
-
-        perturb_loss = loss_fn(alter_class, perturbed_probs)
-        #TODO: issue: no gradients provided for any variable when perturbed used like this             
-        #perturb_loss = loss_fn(alter_class, perturbed_probs)
-        counterfactual_loss = loss_fn(alter_class, alter_prediction)
-        l1_loss = my_l1_loss(fmatrix)
-        
-        #pre_softmax shape = batch x num_classes
-        #try BCE loss without logits, i.e. maximis this value
-        
-        pre_softmax_loss = my_l1_loss_pre_Softmax(pre_softmax[:,tf.argmax(alter_class,axis=1)[0]])
-        
-        #combined_loss = W*counterfactual_loss + 2*l1_loss + 1*pre_softmax_loss + perturb_loss
-        combined_loss = perturb_loss
-
-    
-    
-    gradients = tape.gradient(combined_loss, combined.trainable_variables)
-    optimizer.apply_gradients(zip(gradients, combined.trainable_variables))
-      
-    train_loss_metric(counterfactual_loss)
-    train_loss_metric_2(l1_loss)
-    train_loss_metric_3(pre_softmax_loss)
-    train_loss_metric_4(perturb_loss)
-
-    
-    train_acc_metric(alter_class, alter_prediction)
-    #return x1,x2,target1,target2
-
-
-
-
 #%%
 def train_counterfactual_net(model,weights_path, generator, train_gen,test,resume,epochs,L1_weight,for_class,label_map,logging,args):
     #assumption: its a standrd model, not interpretable model
