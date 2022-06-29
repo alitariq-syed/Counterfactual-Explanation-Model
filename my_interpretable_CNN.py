@@ -43,7 +43,6 @@ from tensorflow.keras import optimizers
 
 # from models10 import MySubClassModel
 from codes.load_cxr_dataset import create_cxr_dataframes, load_cxr_dataset
-from codes.support_functions import print_filter_classes_1, print_filter_classes_2, save_interpretable_parameters
 from codes.train_counterfactual_net import train_counterfactual_net
 from codes.support_functions import get_heatmap_only, restore_original_image_from_array
 from codes.filter_visualization_top_k import filter_visualization_top_k
@@ -1532,48 +1531,6 @@ if True:
         sys.stdout.write("\rbatch %i of %i" % (k, batches))
         sys.stdout.flush()
         
-        statistical_analysis = False #global statisitcs for all classes
-        if statistical_analysis:
-            #compute histpgram of activated filters
-            #keep track of activation magnitude
-            default_fmatrix = tf.ones((x_batch_test.shape[0],base_model.output.shape[3]))
-            pred_probs,fmaps,mean_fmaps,_ ,pre_softmax= model([x_batch_test,default_fmatrix], training=False)#with eager
-            alter_prediction,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,alter_pre_softmax = combined(x_batch_test)                
-            
-            t_fmatrix = fmatrix.numpy()
-            for i in tf.where(fmatrix>0):
-                t_fmatrix[i]=1.0
-            t_fmatrix = tf.convert_to_tensor(t_fmatrix)
-            alter_probs, c_fmaps, c_mean_fmap, c_modified_mean_fmap_activations,alter_pre_softmax = model([x_batch_test,t_fmatrix])#with eager
-            
-            
-            for i in range(fmatrix.shape[0]): 
-                filter_histogram_cf += t_fmatrix[i] 
-                filter_magnitude_cf += c_modified_mean_fmap_activations[i]
-            # filter_histogram_default += tf.zeros_like(fmatrix[0])
-            # filter_magnitude_default += tf.zeros_like(fmatrix[0])
-            filter_sum += fmatrix.shape[0]
-            
-            if k==batches-1:
-                print("\nfinished")
-                plt.plot(filter_histogram_cf), plt.show()
-                plt.plot(filter_magnitude_cf), plt.show()
-                plt.plot(filter_magnitude_cf/(filter_histogram_cf+0.00001)), plt.show()
-                
-                mName = args.model[:-1]
-                #plt.ylim([0, np.max(c_mean_fmap)+1]), 
-                plt.plot(filter_histogram_cf), plt.savefig(fname="./figs_for_paper/"+mName+"_filter_histogram_cf_"+str(alter_class)+"_all_test.png", dpi=None, bbox_inches = 'tight'), plt.show()
-                #plt.plot(filter_magnitude_cf/(filter_histogram_cf+0.00001)), plt.savefig(fname="./figs_for_paper/"+mName+"_avg_filter_magnitude_cf_"+str(class_for_analysis)+"_all_test.png", dpi=None, bbox_inches = 'tight'), plt.show()
-                #plt.plot(filter_magnitude_cf), plt.savefig(fname="./figs_for_paper/"+mName+"_filter_magnitude_cf_"+str(class_for_analysis)+"_all_test.png", dpi=None, bbox_inches = 'tight'), plt.show()
-                plt.plot(filter_magnitude_cf/max(filter_histogram_cf)), plt.savefig(fname="./figs_for_paper/"+mName+"_normalized_filter_magnitude_cf_"+str(alter_class)+"_all_test.png", dpi=None, bbox_inches = 'tight'), plt.show()
-                
-                np.save(file= "./figs_for_paper/"+mName+"_filter_histogram_cf_"+str(alter_class)+"_all_test.np",arr=filter_histogram_cf)
-                np.save(file= "./figs_for_paper/"+mName+"_normalized_filter_magnitude_cf_"+str(alter_class)+"_all_test.np", arr=filter_magnitude_cf)
-                
-                sys.exit()
-            continue
-
-
         for i in range (len(x_batch_test)):
             img_ind = i#3
             
@@ -1610,20 +1567,64 @@ if True:
                 # assert(args.find_global_filters==True)
                 #compute histpgram of activated filters
                 #keep track of activation magnitude
-                if sum(y_batch_test[:,args.alter_class])<len(x_batch_test):
+
+                if True:#sum(y_batch_test[:,args.alter_class])<len(x_batch_test):
                     #process sequentially
-                    alter_prediction,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,alter_pre_softmax = combined(np.expand_dims(x_batch_test[img_ind],0))                
-                
-                    t_fmatrix = fmatrix.numpy()
-                    for i in tf.where(fmatrix>0):
-                        t_fmatrix[i]=1.0
-                    t_fmatrix = tf.convert_to_tensor(t_fmatrix)
-                    alter_probs, c_fmaps, c_mean_fmap, c_modified_mean_fmap_activations,alter_pre_softmax = model([np.expand_dims(x_batch_test[img_ind],0),t_fmatrix])#with eager
                     
-                    # print('thresholded counterfactual')
-                    # print( 'gt class: ',label_map[np.argmax(y_gt)], '  prob: ',alter_probs[0][np.argmax(y_gt)].numpy()*100,'%')
-                    # print( 'alter class: ',label_map[alter_class], '  prob: ',alter_probs[0][alter_class].numpy()*100,'%')
-                    # print('alter_pre_softmax: ',alter_pre_softmax[0][0:10])
+                    pred_probs,fmaps,mean_fmaps,_ ,pre_softmax= model([np.expand_dims(x_batch_test[img_ind],0),np.expand_dims(default_fmatrix[0],0)], training=False)#with eager
+                    #pred_probs,fmaps_x1,fmaps_x2,target_1,target_2,raw_map,forward_1 = model(np.expand_dims(x_batch_test[img_ind],0),y_batch_test[img_ind])#with eager
+                    print('predicted: ',label_map[np.argmax(pred_probs)], ' with prob: ',np.max(pred_probs)*100,'%')
+                    print ('actual: ', label_map[np.argmax(y_gt)], ' with prob: ',pred_probs[0][np.argmax(y_gt)].numpy()*100,'%')
+                    #print('pre_softmax: ',pre_softmax[0][0:10])
+                    
+                    if np.argmax(pred_probs) != np.argmax(y_gt) and True:
+                        print("wrong prediction")
+                        # incorrect_class=np.argmax(pred_probs)
+                        # print("skipping wrong prediction")
+                        # filter_sum += 1
+                        
+                        # continue
+                    else:
+                        pass
+                        # print("skipping correct prediction")
+                        # continue
+                    
+                   # #skip high confidence predictions
+                    skip_low_confidence = True
+                    if skip_low_confidence:
+                        if pred_probs[0][np.argmax(y_gt)]<0.9:
+                            print("skipping low confidence prediction")
+                            filter_sum += 1
+                            continue
+     
+                        
+                    alter_prediction,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,alter_pre_softmax = combined(np.expand_dims(x_batch_test[img_ind],0))
+                    filters_off = fmatrix
+              
+                    apply_thresh = True
+                    if apply_thresh:
+                        t_fmatrix = filters_off.numpy()
+                        if args.counterfactual_PP:
+                            for i in tf.where(filters_off>0):
+                                t_fmatrix[tuple(i)]=1.0
+                            t_fmatrix = tf.convert_to_tensor(t_fmatrix)
+                        alter_probs, c_fmaps, c_mean_fmap, c_modified_mean_fmap_activations,alter_pre_softmax = model([np.expand_dims(x_batch_test[img_ind],0),t_fmatrix])#with eager
+                        
+                        # print('\nthresholded counterfactual')
+                        # print( 'gt class: ',label_map[np.argmax(y_gt)], '  prob: ',alter_probs[0][np.argmax(y_gt)].numpy()*100,'%')
+                        # print( 'alter class: ',label_map[alter_class], '  prob: ',alter_probs[0][alter_class].numpy()*100,'%')
+
+
+                    ###############################
+                    # alter_prediction,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,alter_pre_softmax = combined(np.expand_dims(x_batch_test[img_ind],0))                
+                
+                    # t_fmatrix = fmatrix.numpy()
+                    # for i in tf.where(fmatrix>0):
+                    #     t_fmatrix[i]=1.0
+                    # t_fmatrix = tf.convert_to_tensor(t_fmatrix)
+                    # alter_probs, c_fmaps, c_mean_fmap, c_modified_mean_fmap_activations,alter_pre_softmax = model([np.expand_dims(x_batch_test[img_ind],0),t_fmatrix])#with eager
+                    ###############################
+
                     
                     filter_histogram_cf += t_fmatrix[0]
                     filter_magnitude_cf += c_modified_mean_fmap_activations[0]
@@ -1688,12 +1689,16 @@ if True:
                     
                     mName = args.model[:-1]+'_'+args.dataset
                     #plt.ylim([0, np.max(c_mean_fmap)+1]), 
-                    plt.plot(filter_histogram_cf), plt.ylim([0, np.max(filter_histogram_cf)+1]),plt.xlabel("Filter number"),plt.ylabel("Filter activation count"), plt.savefig(fname="./figs_for_paper/"+mName+"_filter_histogram_cf_alter_class_"+str(alter_class)+"_"+str(class_for_analysis)+"_train_set.png", dpi=300, bbox_inches = 'tight'), plt.show()
-                    plt.plot(filter_magnitude_cf/max(filter_histogram_cf)),plt.xlabel("Filter number"),plt.ylabel("Avg. activation magnitude"), plt.ylim([0, np.max(filter_magnitude_cf/np.max(filter_histogram_cf))+1]), plt.savefig(fname="./figs_for_paper/"+mName+"_normalized_filter_magnitude_cf_alter_class_"+str(alter_class)+"_"+str(class_for_analysis)+"_train_set.png", dpi=300, bbox_inches = 'tight'), plt.show()
+                    
+                    # save_folder = "./figs_for_paper/"
+                    save_folder = "./model_debugging_work/"
+                    
+                    plt.plot(filter_histogram_cf), plt.ylim([0, np.max(filter_histogram_cf)+1]),plt.xlabel("Filter number"),plt.ylabel("Filter activation count"), plt.savefig(fname=save_folder+mName+"_filter_histogram_cf_alter_class_"+str(alter_class)+"_"+str(class_for_analysis)+"_train_set.png", dpi=300, bbox_inches = 'tight'), plt.show()
+                    plt.plot(filter_magnitude_cf/max(filter_histogram_cf)),plt.xlabel("Filter number"),plt.ylabel("Avg. activation magnitude"), plt.ylim([0, np.max(filter_magnitude_cf/np.max(filter_histogram_cf))+1]), plt.savefig(fname=save_folder+mName+"_normalized_filter_magnitude_cf_alter_class_"+str(alter_class)+"_"+str(class_for_analysis)+"_train_set.png", dpi=300, bbox_inches = 'tight'), plt.show()
                     #plt.plot(filter_magnitude_cf/max(filter_histogram_cf)), plt.ylim([0, np.max(filter_magnitude_cf/max(filter_histogram_cf))+1]), plt.show()
                     
-                    np.save(file= "./figs_for_paper/"+mName+"_filter_histogram_cf_"+str(alter_class)+"_train_set.np",arr=filter_histogram_cf)
-                    np.save(file= "./figs_for_paper/"+mName+"_normalized_filter_magnitude_cf_"+str(alter_class)+"_train_set.np", arr=filter_magnitude_cf)
+                    np.save(file= save_folder+mName+"_filter_histogram_cf_"+str(alter_class)+"_train_set.np",arr=filter_histogram_cf)
+                    np.save(file= save_folder+mName+"_normalized_filter_magnitude_cf_"+str(alter_class)+"_train_set.np", arr=filter_magnitude_cf)
                     
                     
                     #######################
