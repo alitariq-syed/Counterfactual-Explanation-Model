@@ -363,7 +363,7 @@ if args.dataset != 'mnist':
                                     color_mode='rgb',
                                     class_mode='categorical',
                                     batch_size=batch_size,
-                                    shuffle=True,
+                                    shuffle= True if not args.find_global_filters else False,
                                     seed=None,
                                     subset='training',
                                     interpolation='nearest',
@@ -1572,18 +1572,29 @@ if True:
                     #process sequentially
                     
                     pred_probs,fmaps,mean_fmaps,_ ,pre_softmax= model([np.expand_dims(x_batch_test[img_ind],0),np.expand_dims(default_fmatrix[0],0)], training=False)#with eager
-                    #pred_probs,fmaps_x1,fmaps_x2,target_1,target_2,raw_map,forward_1 = model(np.expand_dims(x_batch_test[img_ind],0),y_batch_test[img_ind])#with eager
-                    print('predicted: ',label_map[np.argmax(pred_probs)], ' with prob: ',np.max(pred_probs)*100,'%')
-                    print ('actual: ', label_map[np.argmax(y_gt)], ' with prob: ',pred_probs[0][np.argmax(y_gt)].numpy()*100,'%')
-                    #print('pre_softmax: ',pre_softmax[0][0:10])
+                    # print('predicted: ',label_map[np.argmax(pred_probs)], ' with prob: ',np.max(pred_probs)*100,'%')
+                    # print ('actual: ', label_map[np.argmax(y_gt)], ' with prob: ',pred_probs[0][np.argmax(y_gt)].numpy()*100,'%')
                     
+                    
+                    gradcam = True
+                    if gradcam:
+                        image_nopreprocessed = restore_original_image_from_array(x_batch_test[img_ind].squeeze())
+                        output_orig,_ = explainer.explain((np.expand_dims(x_batch_test[img_ind],0),None),model,np.argmax(pred_probs),image_nopreprocessed=np.expand_dims(image_nopreprocessed,0),fmatrix=default_fmatrix)
+                        
+                        plt.imshow(output_orig), plt.axis('off'), plt.title('original prediction')
+                        plt.show()
+                        
+                        output_gradcam_alter,_ = explainer.explain((np.expand_dims(x_batch_test[img_ind],0),None),model,alter_class,image_nopreprocessed=np.expand_dims(image_nopreprocessed,0),fmatrix=default_fmatrix)
+                        plt.imshow(output_gradcam_alter), plt.axis('off'), plt.title('GradCAM alter prediction')
+                        plt.show()                    
+
                     if np.argmax(pred_probs) != np.argmax(y_gt) and True:
                         print("wrong prediction")
                         # incorrect_class=np.argmax(pred_probs)
-                        # print("skipping wrong prediction")
-                        # filter_sum += 1
+                        print("skipping wrong prediction")
+                        filter_sum += 1
                         
-                        # continue
+                        continue
                     else:
                         pass
                         # print("skipping correct prediction")
@@ -1616,6 +1627,7 @@ if True:
 
 
                     ###############################
+                    #previous code
                     # alter_prediction,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,alter_pre_softmax = combined(np.expand_dims(x_batch_test[img_ind],0))                
                 
                     # t_fmatrix = fmatrix.numpy()
