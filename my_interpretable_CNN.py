@@ -49,6 +49,7 @@ from codes.filter_visualization_top_k import filter_visualization_top_k
 from codes.filter_visualization_same_image import filter_visualization_same_image
 from codes.model_accuracy_with_disabled_filters import model_accuracy_filters
 from codes.filter_visualization_top_k_PNs import filter_visualization_top_k_PNs
+from codes.find_agreement_global_MC import find_agreement_global_MC
 #%%
 KAGGLE = False
 parser = argparse.ArgumentParser(description='Interpretable CNN')
@@ -61,7 +62,9 @@ parser.add_argument('--user_evaluation' ,default = False) # save images
 
 # CF model args
 parser.add_argument('--train_counterfactual_net' ,default = False)## 
+parser.add_argument('--train_singular_counterfactual_net' ,default = False)## 
 parser.add_argument('--choose_subclass' ,default = False, type=np.bool)## choose subclass for training on
+
 parser.add_argument('--counterfactual_PP' ,default = True)## whether to generate filters for PP  or PN case 
 parser.add_argument('--resume_counterfactual_net' ,default = False)## False = train CF model from scratch; True = resume training CF model
 parser.add_argument('--test_counterfactual_net' ,default = False)## 
@@ -69,11 +72,11 @@ parser.add_argument('--load_counterfactual_net',default = True)
 parser.add_argument('--resume', default =True) # load saved weights for base model
 parser.add_argument('--alter_class', default = 9, type = np.int32) # alter class #misclassified classes 9-170
 parser.add_argument('--analysis_class', default = 9, type = np.int32) # class for which images are loaded and analyzed
-parser.add_argument('--find_global_filters', default = True) # perform statistical analysis to find the activation magnitude of all filters for the alter class and train images of alter class
+parser.add_argument('--find_global_filters', default = False) # perform statistical analysis to find the activation magnitude of all filters for the alter class and train images of alter class
 parser.add_argument('--alter_class_2', default = 0, type = np.int32) # alter class for 2nd example, 9, 170, 25, 125, 108
-parser.add_argument('--cfe_epochs', default = 30, type = np.int32 ) #100 for mnist, 200 for CUB
+parser.add_argument('--cfe_epochs', default = 200, type = np.int32 ) #100 for mnist, 200 for CUB
 parser.add_argument('--l1_weight', default = 2, type = np.float32) # 2 default
-parser.add_argument('--save_logFile', default = False,type=np.bool) #
+parser.add_argument('--save_logFile', default = True,type=np.bool) #
 
 #parser.add_argument('--pretrained', default = False) # load self-pretrained model for cifar dataset... i.e. load base model already trained on cifar-10
 
@@ -93,6 +96,9 @@ np.random.seed(seed=100)
 if KAGGLE: args = parser.parse_known_args()[0] 
 else: args = parser.parse_args()
 
+if (args.train_singular_counterfactual_net and args.choose_subclass):
+    raise SystemExit("train_singular_counterfactual_net and args.choose_subclass cannot be TRUE")
+    
 if args.train_counterfactual_net:
     assert(args.find_global_filters==False)
     #make sure training generators are setup properly
@@ -103,7 +109,7 @@ filter_data_path = './create_training_data/'+args.model+args.dataset+'/standard'
 
 
 if not os.path.exists(weights_path):
-    os.makedirs(weights_path)    
+    os.makedirs(weights_path)
 logging = args.save_logFile # save file not required if code executed in jupyter notebook
 if logging and args.train_counterfactual_net: 
     if args.counterfactual_PP:
@@ -1220,10 +1226,13 @@ if (args.train_counterfactual_net or args.load_counterfactual_net):
     if args.train_counterfactual_net:
         cf_epochs = args.cfe_epochs #100 #100 for MNIST, 200 for CUB
         L1_weight = args.l1_weight #2 for MNIST, 2,4,6 for CUB (default 4?)
-        for_class = args.alter_class #0 #0-9 for MNIST, 8,9s,10,11 for CUB (default 9) or 0,1,2,3 for subset training data case
+        for_class = args.alter_class if not args.train_singular_counterfactual_net else "ALL" #0 #0-9 for MNIST, 8,9s,10,11 for CUB (default 9) or 0,1,2,3 for subset training data case
         print("threshold: ", thresh)
         print("l1 weight: ", L1_weight)
-        print("training CF model for alter class: ",label_map[for_class])
+        if not args.train_singular_counterfactual_net:
+            print("training CF model for alter class: ",label_map[for_class])
+        else:
+            print("training singular CF model for all classes")
         #TODO: pass parameters using just args
         #actual_test_gen train_gen
         combined, generator = train_counterfactual_net(model,weights_path, counterfactual_generator, train_gen,args.test_counterfactual_net, args.resume_counterfactual_net,epochs=cf_epochs,L1_weight=L1_weight,for_class=for_class,label_map=label_map,logging=logging,args=args) 
@@ -1255,13 +1264,20 @@ if (args.train_counterfactual_net or args.load_counterfactual_net):
         #combined.compile(loss='binary_crossentropy', optimizer=optimizer)
         #combined.summary()
         
-        if args.counterfactual_PP:
-            mode = '' 
-            print("Loading CF model for PPs")
+        if not args.train_singular_counterfactual_net:
+            if args.choose_subclass:
+                combined.load_weights(filepath=weights_path+'/counterfactual_combined_model_only_010.Red_winged_Blackbird_alter_class.hdf5')
+            else:                
+                if args.counterfactual_PP:
+                    mode = '' 
+                    print("Loading CF model for PPs")
+                else:
+                    mode = 'PN_'
+                    print("Loading CF model for PNs")
+                combined.load_weights(filepath=weights_path+'/'+mode+'counterfactual_combined_model_fixed_'+str(label_map[args.alter_class])+'_alter_class.hdf5')
         else:
-            mode = 'PN_'
-            print("Loading CF model for PNs")
-        combined.load_weights(filepath=weights_path+'/'+mode+'counterfactual_combined_model_fixed_'+str(label_map[args.alter_class])+'_alter_class.hdf5')
+            combined.load_weights(filepath=weights_path+'/counterfactual_combined_model_ALL_classes_epoch_131.hdf5')
+            
 
 #%%
 W = model.weights[-2]
@@ -1563,7 +1579,7 @@ if True:
             # combined.load_weights(filepath=weights_path+'/'+mode+'counterfactual_combined_model_fixed_'+str(label_map[args.alter_class])+'_alter_class.hdf5')
 
             # statistical_analysis = True #global statistics for alter class images only
-            if args.find_global_filters:
+            if args.find_global_filters and True:
                 # assert(args.find_global_filters==True)
                 #compute histpgram of activated filters
                 #keep track of activation magnitude
@@ -1758,15 +1774,15 @@ if True:
             if np.argmax(pred_probs) != np.argmax(y_gt) and True:
                 print("wrong prediction")
                 # incorrect_class=np.argmax(pred_probs)
-                print("skipping wrong prediction")
-                continue
+                # print("skipping wrong prediction")
+                # continue
             else:
                 pass
                 # print("skipping correct prediction")
                 # continue
             
            # #skip high confidence predictions
-            skip_high_confidence = False
+            skip_high_confidence = True
             if skip_high_confidence:
                 if pred_probs[0][np.argmax(y_gt)]>0.9:
                     print("skipping high confidence prediction")
@@ -1900,6 +1916,31 @@ if True:
                 if not args.counterfactual_PP:
                     plt.plot(PN_add[0],color='red')
                     plt.plot(c_mean_fmap[0]), plt.title('PN_additions'),plt.ylim([0, np.max(c_mean_fmap)+1]), plt.show()
+            #%% model debugging misclassification analysis
+            #compare MC filters of inferred class with the global MC filters of inferred and top-3 classes to find agreement with the inferred class or other classes
+            if True:
+                inferred_class = np.argmax(pred_probs)
+                
+                selected_probs = alter_probs # alter_probs #pred_probs
+                top_3_candidate_classes= []
+                k=3
+                ind = np.argpartition(selected_probs[0], -k)[-k:]
+                ind = ind[np.argsort(selected_probs[0].numpy()[ind])]                
+                for i in range(k):
+                    # print('top ',str(i+1)+' predicted: ',label_map[ind[k-1-i]], ' with prob: ',pred_probs[0][ind[k-1-i]].numpy()*100,'%')
+                    top_3_candidate_classes.append(ind[k-1-i])
+                
+                scores = []
+                top_3_candidate_classes=[9,25,125,108,170]
+                for cand_class in top_3_candidate_classes:
+                    #find agreement with global MC of each class
+                    common_filters_count = find_agreement_global_MC(pred_MC=c_modified_mean_fmap_activations[0], target_class=cand_class, args=args)
+                    scores.append(common_filters_count)
+                
+                print('scores', scores)    
+                continue
+            
+
             #%% disabled PP prediction:
             enabled_filters = 1- t_fmatrix[0]
             dis_alter_probs, dis_fmaps, dis_mean_fmap, dis_modified_mean_fmap_activations,dis_alter_pre_softmax = model([np.expand_dims(x_batch_test[img_ind],0),enabled_filters])#with eager
