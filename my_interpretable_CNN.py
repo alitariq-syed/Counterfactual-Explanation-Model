@@ -54,29 +54,41 @@ from codes.find_agreement_global_MC import find_agreement_global_MC
 KAGGLE = False
 parser = argparse.ArgumentParser(description='Interpretable CNN')
 
-#choose wheter to train a CF model for a given base model or train a base model from scratch
-parser.add_argument('--create_counterfactual_combined' ,default = True)## create CF model for a pretrained base model or train a new base model
-parser.add_argument('--filter_visualization' ,default = True) # find top k highest and lowest activation magnitudes for the target filter and the corresponding images
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
-parser.add_argument('--user_evaluation' ,default = False) # save images
+#choose wheter to train a CF model for a given base model or train a base model from scratch
+parser.add_argument('--create_counterfactual_combined' ,default = True,type=str2bool)## create CF model for a pretrained base model or train a new base model
+parser.add_argument('--filter_visualization' ,default = True,type=str2bool) # find top k highest and lowest activation magnitudes for the target filter and the corresponding images
+
+parser.add_argument('--user_evaluation' ,default = False,type=str2bool) # save images
 
 # CF model args
-parser.add_argument('--train_counterfactual_net' ,default = False)## 
-parser.add_argument('--train_singular_counterfactual_net' ,default = False)## 
-parser.add_argument('--choose_subclass' ,default = False, type=np.bool)## choose subclass for training on
+parser.add_argument('--train_counterfactual_net' ,default = True, type=str2bool)## 
+parser.add_argument('--train_all_classes' ,default = True, type=str2bool)## 
 
-parser.add_argument('--counterfactual_PP' ,default = True)## whether to generate filters for PP  or PN case 
-parser.add_argument('--resume_counterfactual_net' ,default = False)## False = train CF model from scratch; True = resume training CF model
-parser.add_argument('--test_counterfactual_net' ,default = False)## 
-parser.add_argument('--load_counterfactual_net',default = True)
-parser.add_argument('--resume', default =True) # load saved weights for base model
+parser.add_argument('--train_singular_counterfactual_net' ,default = False, type=str2bool)## 
+parser.add_argument('--choose_subclass' ,default = True, type=str2bool)## choose subclass for training on
+
+parser.add_argument('--counterfactual_PP' ,default = True, type=str2bool)## whether to generate filters for PP  or PN case 
+parser.add_argument('--resume_counterfactual_net' ,default = False, type=str2bool)## False = train CF model from scratch; True = resume training CF model
+parser.add_argument('--test_counterfactual_net' ,default = False, type=str2bool)## 
+parser.add_argument('--load_counterfactual_net',default = True, type=str2bool)
+parser.add_argument('--resume', default =True, type=str2bool) # load saved weights for base model
 parser.add_argument('--alter_class', default = 9, type = np.int32) # alter class #misclassified classes 9-170
 parser.add_argument('--analysis_class', default = 9, type = np.int32) # class for which images are loaded and analyzed
-parser.add_argument('--find_global_filters', default = False) # perform statistical analysis to find the activation magnitude of all filters for the alter class and train images of alter class
+parser.add_argument('--find_global_filters', default = False, type=str2bool) # perform statistical analysis to find the activation magnitude of all filters for the alter class and train images of alter class
 parser.add_argument('--alter_class_2', default = 0, type = np.int32) # alter class for 2nd example, 9, 170, 25, 125, 108
-parser.add_argument('--cfe_epochs', default = 200, type = np.int32 ) #100 for mnist, 200 for CUB
+parser.add_argument('--cfe_epochs', default = 1, type = np.int32 ) #100 for mnist, 200 for CUB
 parser.add_argument('--l1_weight', default = 2, type = np.float32) # 2 default
-parser.add_argument('--save_logFile', default = True,type=np.bool) #
+parser.add_argument('--save_logFile', default = False, type=str2bool) #
 
 #parser.add_argument('--pretrained', default = False) # load self-pretrained model for cifar dataset... i.e. load base model already trained on cifar-10
 
@@ -1239,13 +1251,41 @@ if (args.train_counterfactual_net or args.load_counterfactual_net):
         #if logging: sys.stdout.close()        
         #sys.modules[__name__].__dict__.clear()
         #os._exit(00)
+        tf.keras.backend.clear_session()
+        del combined
+        del generator
+        del model
+        import gc
+        gc.collect()
+        
+        # import os
+        # os._exit(00)
+        # from numba import cuda
+        # cuda.select_device(0)
+        # cuda.close()
+        
+        
         from IPython import get_ipython
         ipython = get_ipython()
         ipython.magic("reset -f")
-        sys.exit()
+        # sys.exit()
     else:
         #counterfactual_generator.load_weights(filepath=weights_path+'/counterfactual_generator_model.hdf5')
         
+        if not args.train_singular_counterfactual_net:
+            if args.choose_subclass:
+                counterfactual_generator.load_weights(filepath=weights_path+'/counterfactual_generator_model_only_010.Red_winged_Blackbird_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
+            else:                
+                if args.counterfactual_PP:
+                    mode = '' 
+                    print("Loading CF model for PPs")
+                else:
+                    mode = 'PN_'
+                    print("Loading CF model for PNs")
+                counterfactual_generator.load_weights(filepath=weights_path+'/'+mode+'counterfactual_generator_model_fixed_'+str(label_map[args.alter_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
+        else:
+            counterfactual_generator.load_weights(filepath=weights_path+'/counterfactual_generator_model_ALL_classes_epoch_131.hdf5')
+            
         model.trainable = False
         img = tf.keras.Input(shape=model.input_shape[0][1:4])
         if args.counterfactual_PP:
@@ -1264,19 +1304,7 @@ if (args.train_counterfactual_net or args.load_counterfactual_net):
         #combined.compile(loss='binary_crossentropy', optimizer=optimizer)
         #combined.summary()
         
-        if not args.train_singular_counterfactual_net:
-            if args.choose_subclass:
-                combined.load_weights(filepath=weights_path+'/counterfactual_combined_model_only_010.Red_winged_Blackbird_alter_class.hdf5')
-            else:                
-                if args.counterfactual_PP:
-                    mode = '' 
-                    print("Loading CF model for PPs")
-                else:
-                    mode = 'PN_'
-                    print("Loading CF model for PNs")
-                combined.load_weights(filepath=weights_path+'/'+mode+'counterfactual_combined_model_fixed_'+str(label_map[args.alter_class])+'_alter_class.hdf5')
-        else:
-            combined.load_weights(filepath=weights_path+'/counterfactual_combined_model_ALL_classes_epoch_131.hdf5')
+
             
 
 #%%
@@ -1719,7 +1747,9 @@ if True:
                     #plt.ylim([0, np.max(c_mean_fmap)+1]), 
                     
                     # save_folder = "./figs_for_paper/"
-                    save_folder = "./model_debugging_work/"
+                    save_folder = "./model_debugging_work/epoch_"+str(args.cfe_epochs)+"/"
+                    if not os.path.exists(save_folder):
+                        os.makedirs(save_folder)
                     
                     plt.plot(filter_histogram_cf), plt.ylim([0, np.max(filter_histogram_cf)+1]),plt.xlabel("Filter number"),plt.ylabel("Filter activation count"), plt.savefig(fname=save_folder+mName+"_filter_histogram_cf_alter_class_"+str(alter_class)+"_"+str(class_for_analysis)+"_train_set.png", dpi=300, bbox_inches = 'tight'), plt.show()
                     plt.plot(filter_magnitude_cf/max(filter_histogram_cf)),plt.xlabel("Filter number"),plt.ylabel("Avg. activation magnitude"), plt.ylim([0, np.max(filter_magnitude_cf/np.max(filter_histogram_cf))+1]), plt.savefig(fname=save_folder+mName+"_normalized_filter_magnitude_cf_alter_class_"+str(alter_class)+"_"+str(class_for_analysis)+"_train_set.png", dpi=300, bbox_inches = 'tight'), plt.show()

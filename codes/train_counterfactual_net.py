@@ -162,21 +162,6 @@ def train_counterfactual_net(model,weights_path, generator, train_gen,test,resum
     # noise as input => generates images => determines validity 
     #img = tf.keras.Input(shape=model.input[0].shape)
     
-    img = tf.keras.Input(shape=model.input_shape[0][1:4])
-    
-    fmatrix = generator(img)
-    
-    alter_prediction,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax = model([img,fmatrix])
-    
-    
-    combined = tf.keras.Model(inputs=img, outputs=[alter_prediction,fmatrix,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax])#,PN_prediction])
-    combined.compile(loss='binary_crossentropy', optimizer=optimizer)
-    combined.summary()
-    
-    #VOC-dataset
-    #label_map = ['bird',  'cat', 'cow', 'dog', 'horse', 'sheep']
-    #label_map = ['cat', 'dog'] #catvsdog dataset
-
     for_alter_class=True if not args.train_singular_counterfactual_net else False #if false--> same class, oppposite class
     for_fixed_alter_class=True if not args.choose_subclass else False
     
@@ -194,11 +179,28 @@ def train_counterfactual_net(model,weights_path, generator, train_gen,test,resum
     if resume:
         if for_alter_class:
             if args.choose_subclass:
-                combined.load_weights(filepath=weights_path+'/counterfactual_combined_model_only_'+str(label_map[for_class])+'_alter_class.hdf5')
+                generator.load_weights(filepath=weights_path+'/counterfactual_combined_model_only_'+str(label_map[for_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
             else:
-                combined.load_weights(filepath=weights_path+'/'+mode+'counterfactual_combined_model_fixed_'+str(label_map[for_class])+'_alter_class_TEST.hdf5')
+                generator.load_weights(filepath=weights_path+'/'+mode+'counterfactual_combined_model_fixed_'+str(label_map[for_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
         else:
-            combined.load_weights(filepath=weights_path+'/counterfactual_combined_model_ALL_classes_epoch_68_16_batch.hdf5')
+            generator.load_weights(filepath=weights_path+'/counterfactual_combined_model_ALL_classes_epoch_68_16_batch.hdf5')
+            
+    img = tf.keras.Input(shape=model.input_shape[0][1:4])
+    
+    fmatrix = generator(img)
+    
+    alter_prediction,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax = model([img,fmatrix])
+    
+    
+    combined = tf.keras.Model(inputs=img, outputs=[alter_prediction,fmatrix,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax])#,PN_prediction])
+    combined.compile(loss='binary_crossentropy', optimizer=optimizer)
+    combined.summary()
+    
+    #VOC-dataset
+    #label_map = ['bird',  'cat', 'cow', 'dog', 'horse', 'sheep']
+    #label_map = ['cat', 'dog'] #catvsdog dataset
+
+
     
     batches=math.ceil(train_gen.n/train_gen.batch_size)
     train_gen.reset()
@@ -268,13 +270,13 @@ def train_counterfactual_net(model,weights_path, generator, train_gen,test,resum
             #save model at end of each epoch combined or generator?
             if for_alter_class:#false for single image
                 if for_fixed_alter_class:
-                    combined.save_weights(filepath=weights_path+'/'+mode+'counterfactual_combined_model_fixed_'+str(label_map[for_class])+'_alter_class.hdf5')
+                    generator.save_weights(filepath=weights_path+'/'+mode+'counterfactual_generator_model_fixed_'+str(label_map[for_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
                 else:
                     pass
-                    # if epoch%10 ==0:
-                    #     combined.save_weights(filepath=weights_path+'/counterfactual_combined_model_only_'+str(label_map[for_class])+'_alter_class.hdf5')
+                    if epoch%10 ==0:
+                        generator.save_weights(filepath=weights_path+'/counterfactual_generator_model_only_'+str(label_map[for_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
             else:
-                combined.save_weights(filepath=weights_path+'/'+mode+'counterfactual_combined_model_ALL_classes_epoch_'+str(epoch)+'.hdf5')
+                generator.save_weights(filepath=weights_path+'/'+mode+'counterfactual_generator_model_ALL_classes_epoch_'+str(epoch)+'.hdf5')
             #generator.save_weights(filepath=weights_path+'/counterfactual_generator_model_epoch_'+str(epoch)+'.hdf5')
             
             # Reset training metrics at the end of each epoch
@@ -288,7 +290,7 @@ def train_counterfactual_net(model,weights_path, generator, train_gen,test,resum
         #combined.save_weights(filepath=weights_path+'/counterfactual_combined_model_fixed_dog_alter_class_single_Image_epoch_'+str(epoch)+'.hdf5')
         #end epoch
         if args.choose_subclass:
-            combined.save_weights(filepath=weights_path+'/counterfactual_combined_model_only_'+str(label_map[for_class])+'_alter_class.hdf5')
+            generator.save_weights(filepath=weights_path+'/counterfactual_generator_model_only_'+str(label_map[for_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
     else:
         #print('Testing...')
         assert(False)
@@ -296,10 +298,10 @@ def train_counterfactual_net(model,weights_path, generator, train_gen,test,resum
         
         if for_alter_class:
             # combined.load_weights(filepath=weights_path+'/counterfactual_combined_model_alter_class_epoch_29.hdf5')
-            combined.load_weights(filepath=weights_path+'/'+mode+'counterfactual_combined_model_fixed_'+str(label_map[args.alter_class])+'_alter_class.hdf5')
+            generator.load_weights(filepath=weights_path+'/'+mode+'counterfactual_generator_model_fixed_'+str(label_map[args.alter_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
 
         else:
-            combined.load_weights(filepath=weights_path+'/counterfactual_combined_model_same_class_epoch_29.hdf5')
+            generator.load_weights(filepath=weights_path+'/counterfactual_generator_model_same_class_epoch_29.hdf5')
 
         batches=math.ceil(train_gen.n/train_gen.batch_size)
         
