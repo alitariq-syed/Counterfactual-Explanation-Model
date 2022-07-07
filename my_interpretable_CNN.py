@@ -75,7 +75,7 @@ parser.add_argument('--train_counterfactual_net' ,default = True, type=str2bool)
 parser.add_argument('--train_all_classes' ,default = True, type=str2bool)## 
 
 parser.add_argument('--train_singular_counterfactual_net' ,default = False, type=str2bool)## 
-parser.add_argument('--choose_subclass' ,default = True, type=str2bool)## choose subclass for training on
+parser.add_argument('--choose_subclass' ,default = False, type=str2bool)## choose subclass for training on
 
 parser.add_argument('--counterfactual_PP' ,default = True, type=str2bool)## whether to generate filters for PP  or PN case 
 parser.add_argument('--resume_counterfactual_net' ,default = False, type=str2bool)## False = train CF model from scratch; True = resume training CF model
@@ -930,7 +930,6 @@ test_loss_metric = tf.keras.metrics.Mean(name='test_loss')
 # filter_mean_activations_1 = tf.zeros((k,num_classes))*-1 # mean activation per class for each filter... then choose argmax as filter category
 # filter_mean_activations_2 = tf.zeros((k,num_classes))*-1
 
-#%%
 """tf.function constructs a callable that executes a TensorFlow graph (tf.Graph) created by trace-compiling the TensorFlow operations in func, effectively executing func as a TensorFlow graph.
 #uncomment following line for faster training but it becomes non-debugable and doesnt execute eagerly"""
         

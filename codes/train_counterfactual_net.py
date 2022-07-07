@@ -30,7 +30,7 @@ test_acc_metric = tf.keras.metrics.CategoricalAccuracy(name='test_accuracy')
 
 
 #optimizer = tf.keras.optimizers.RMSprop(0.001)
-optimizer = tf.keras.optimizers.SGD(lr=0.01/10, momentum=0.9)
+optimizer = tf.keras.optimizers.SGD(lr=0.01/10, momentum=0.9,name='opt')
 
 train_loss_metric = tf.keras.metrics.Mean(name='train_loss')
 test_loss_metric = tf.keras.metrics.Mean(name='test_loss')
@@ -109,7 +109,7 @@ def train_step(x_batch_test, alter_class, combined, W,base_model,L1_weight,PP_mo
         #2x for CUB
     
     gradients = tape.gradient(combined_loss, combined.trainable_variables,unconnected_gradients='zero')
-    optimizer.apply_gradients(zip(gradients, combined.trainable_variables))
+    optimizer.apply_gradients(zip(gradients, combined.trainable_variables))#,name='opt_grad'+str(np.random.randint(10)))
       
     train_loss_metric(counterfactual_loss)
     train_loss_metric_2(l1_loss_PP)
