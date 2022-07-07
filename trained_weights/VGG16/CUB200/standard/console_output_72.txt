@@ -1,5 +1,5 @@
 
- Namespace(filter_visualization=True, user_evaluation=False, train_counterfactual_net=True, train_all_classes=True, train_singular_counterfactual_net=False, choose_subclass=False, counterfactual_PP=True, resume_counterfactual_net=False, test_counterfactual_net=False, load_counterfactual_net=True, resume=True, alter_class=67, analysis_class=9, find_global_filters=False, alter_class_2=0, cfe_epochs=3, l1_weight=2, save_logFile=True, dataset='CUB200', save_directory='./trained_weights/', train_using_builtin_fit_method=True, train=False, fine_tune=False, test=False, model='VGG16/', imagenet_weights=True) 
+ Namespace(filter_visualization=True, user_evaluation=False, train_counterfactual_net=True, train_all_classes=False, train_singular_counterfactual_net=False, choose_subclass=False, counterfactual_PP=True, resume_counterfactual_net=False, test_counterfactual_net=False, load_counterfactual_net=True, resume=True, alter_class=72, analysis_class=9, find_global_filters=False, alter_class_2=0, cfe_epochs=3, l1_weight=2, save_logFile=True, dataset='CUB200', save_directory='./trained_weights/', train_using_builtin_fit_method=True, train=False, fine_tune=False, test=False, model='VGG16/', imagenet_weights=True) 
 
 Model: "base_model"
 __________________________________________________________________________________________________
@@ -61,24 +61,22 @@ ________________________________________________________________________________
 weights loaded
 threshold:  0.5
 l1 weight:  2
-training CF model for alter class:  068.Ruby_throated_Hummingbird
+training CF model for alter class:  073.Blue_Jay
 Training CF model for PPs
-training for fixed alter class:  068.Ruby_throated_Hummingbird
-Model: "model_1"
+training for fixed alter class:  073.Blue_Jay
+Model: "model"
 __________________________________________________________________________________________________
 Layer (type)                    Output Shape         Param #     Connected to                     
 ==================================================================================================
-input_2 (InputLayer)            [(None, 224, 224, 3) 0                                            
+input_1 (InputLayer)            [(None, 224, 224, 3) 0                                            
 __________________________________________________________________________________________________
-counterfactual_model (Functiona (None, 512)          14977344    input_2[0][0]                    
+counterfactual_model (Functiona (None, 512)          14977344    input_1[0][0]                    
 __________________________________________________________________________________________________
-base_model (Functional)         [(None, 200), (None, 14817288    input_2[0][0]                    
+base_model (Functional)         [(None, 200), (None, 14817288    input_1[0][0]                    
                                                                  counterfactual_model[0][0]       
 ==================================================================================================
 Total params: 15,079,944
 Trainable params: 262,656
 Non-trainable params: 14,817,288
 __________________________________________________________________________________________________
-  0%|                                                                                          | 0/338 [00:00<?, ?it/s]epoch 0: 100%|#| 338/338 [03:09<00:00,  1.78it/s, acc=0.888, loss=[1.2946072, 2.6567237, -0.17486091, 0.0, 95.17881, 0.
-  0%|                                                                                          | 0/338 [00:00<?, ?it/s]epoch 1: 100%|#| 338/338 [03:02<00:00,  1.85it/s, acc=0.994, loss=[0.39348775, 1.2267089, -0.15562238, 0.0, 43.57563, 0
-  0%|                                                                                          | 0/338 [00:00<?, ?it/s]epoch 2: 100%|#| 338/338 [02:55<00:00,  1.93it/s, acc=0.997, loss=[0.38512754, 1.0484219, -0.15448856, 0.0, 36.590607, 
+  0%|                                                                                          | 0/338 [00:00<?, ?it/s]  0%|                                                                                          | 0/338 [00:17<?, ?it/s]

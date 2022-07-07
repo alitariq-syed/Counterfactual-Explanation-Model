@@ -59,10 +59,13 @@ parser.add_argument('--test', default = False)
 parser.add_argument('--model',default = 'VGG16/')#myCNN, VGG16, resnet50,efficientnet, inceptionv3
 parser.add_argument('--imagenet_weights',default = True) #use imageNet pretrained weights (True for CUB dataset)
 
-KAGGLE = False
+KAGGLE = True
 
-if KAGGLE: args = parser.parse_known_args()[0] 
-else: args = parser.parse_args()
+if KAGGLE: 
+    args = parser.parse_known_args()[0]
+    args.save_directory = "/kaggle/working/trained_weights/" 
+else: 
+    args = parser.parse_args()
 
 if args.train_all_classes:
     weights_path = args.save_directory+args.model+args.dataset+'/all_clases/epochs_'+str(args.cfe_epochs)

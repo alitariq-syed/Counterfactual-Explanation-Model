@@ -57,11 +57,12 @@ elif args.dataset == 'CUB200':
     lab_system=False
     if KAGGLE:
         if official_split:
-            print('official split not established for training on KAGGLE')
-            sys.exit()
+            print('using official split on KAGGLE')
+            base_path = '/kaggle/input/cub-train-test-official-split'
+            #sys.exit()
         else:
             base_path = '/kaggle/temp/CUB_200_2011'
-    if lab_system:
+    elif lab_system:
         base_path ='D:/Ali Tariq/CUB_200_2011'
     else:
         base_path = 'G:/CUB_200_2011/CUB_200_2011'
