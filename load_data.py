@@ -58,7 +58,7 @@ elif args.dataset == 'CUB200':
     if KAGGLE:
         if official_split:
             print('using official split on KAGGLE')
-            base_path = '/kaggle/input/cub-train-test-official-split'
+            base_path = '/kaggle/input/cub-train-test-official-split/train_test_split'
             #sys.exit()
         else:
             base_path = '/kaggle/temp/CUB_200_2011'
