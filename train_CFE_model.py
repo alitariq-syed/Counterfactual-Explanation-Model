@@ -59,7 +59,7 @@ logging = args.save_logFile # save file not required if code executed in jupyter
 if args.train_all_classes and KAGGLE:
     assert(args.choose_subclass==False)
     print("train for ALL classes in loop on KAGGLE")
-    classes = num_classes
+    classes = num_classes -10
     start_class=100
 else:
     classes = 1
