@@ -70,7 +70,10 @@ elif args.dataset == 'CUB200':
     if official_split:
         data_dir =base_path+'/train_test_split/train/'
         data_dir_test =base_path+'/train_test_split/test/'
-        label_map = np.loadtxt(fname=base_path + '/classes.txt',dtype='str')
+        if KAGGLE:
+            label_map = np.loadtxt(fname='/kaggle/input/cub-train-test-official-split/classes.txt',dtype='str')
+        else:
+            label_map = np.loadtxt(fname=base_path + '/classes.txt',dtype='str')
         label_map = label_map[:,1].tolist()
         print('using official split')
     else:
