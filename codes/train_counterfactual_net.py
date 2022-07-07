@@ -9,11 +9,7 @@ import tensorflow as tf
 import numpy as np
 import math
 from tqdm import tqdm 
-from tensorflow.keras.layers import GlobalAveragePooling2D
 from tensorflow.python.keras import backend as K
-from codes.support_functions import get_heatmap_only_batch
-from tf_explain_modified.core.grad_cam import GradCAM
-import matplotlib.pyplot as plt
 import sys
 
 #%% manual training loop
