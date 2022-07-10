@@ -1,5 +1,5 @@
 
- Namespace(filter_visualization=True, user_evaluation=False, train_counterfactual_net=True, train_all_classes=False, train_singular_counterfactual_net=False, choose_subclass=False, counterfactual_PP=True, resume_counterfactual_net=False, test_counterfactual_net=False, load_counterfactual_net=True, resume=True, alter_class=9, analysis_class=9, find_global_filters=False, alter_class_2=0, cfe_epochs=3, l1_weight=2, save_logFile=True, dataset='CUB200', save_directory='./trained_weights/', train_using_builtin_fit_method=True, train=False, fine_tune=False, test=False, model='VGG16/', imagenet_weights=True) 
+ Namespace(filter_visualization=True, user_evaluation=False, train_counterfactual_net=True, train_all_classes=True, train_singular_counterfactual_net=False, choose_subclass=False, counterfactual_PP=True, resume_counterfactual_net=True, resume_from_epoch=3, test_counterfactual_net=False, load_counterfactual_net=True, resume=True, alter_class=9, analysis_class=9, find_global_filters=False, cfe_epochs=6, l1_weight=2, save_logFile=True, dataset='CUB200', save_directory='./trained_weights/', train_using_builtin_fit_method=True, train=False, fine_tune=False, test=False, model='VGG16/', imagenet_weights=True) 
 
 Model: "base_model"
 __________________________________________________________________________________________________
@@ -72,11 +72,16 @@ input_1 (InputLayer)            [(None, 224, 224, 3) 0
 __________________________________________________________________________________________________
 counterfactual_model (Functiona (None, 512)          14977344    input_1[0][0]                    
 __________________________________________________________________________________________________
+tf.math.greater (TFOpLambda)    (None, 512)          0           counterfactual_model[0][0]       
+__________________________________________________________________________________________________
+tf.where (TFOpLambda)           (None, 512)          0           tf.math.greater[0][0]            
+__________________________________________________________________________________________________
 base_model (Functional)         [(None, 200), (None, 14817288    input_1[0][0]                    
-                                                                 counterfactual_model[0][0]       
+                                                                 tf.where[0][0]                   
 ==================================================================================================
 Total params: 15,079,944
 Trainable params: 262,656
 Non-trainable params: 14,817,288
 __________________________________________________________________________________________________
-  0%|          | 0/338 [00:00<?, ?it/s]  0%|          | 0/338 [02:30<?, ?it/s]
+  0%|          | 0/338 [00:00<?, ?it/s]epoch 0:  34%|###3      | 114/338 [02:01<03:59,  1.07s/it, acc=0.995, loss=[0.34678108, 1.1601759, -0.17202167, 0.0, 36.25548, 0.0]]
+Error in callback <bound method AutoreloadMagics.post_execute_hook of <autoreload.AutoreloadMagics object at 0x000001DCA5F37F70>> (for post_execute):

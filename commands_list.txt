@@ -67,6 +67,7 @@ python train_CFE_model.py --alter_class 65
 python train_CFE_model.py --alter_class 66
 python train_CFE_model.py --alter_class 67
 python train_CFE_model.py --alter_class 68
+
 python train_CFE_model.py --alter_class 69
 python train_CFE_model.py --alter_class 70
 python train_CFE_model.py --alter_class 71
@@ -98,7 +99,16 @@ python train_CFE_model.py --alter_class 96
 python train_CFE_model.py --alter_class 97
 python train_CFE_model.py --alter_class 98
 python train_CFE_model.py --alter_class 99
-
+python train_CFE_model.py --alter_class 190
+python train_CFE_model.py --alter_class 191
+python train_CFE_model.py --alter_class 192
+python train_CFE_model.py --alter_class 193
+python train_CFE_model.py --alter_class 194
+python train_CFE_model.py --alter_class 195
+python train_CFE_model.py --alter_class 196
+python train_CFE_model.py --alter_class 197
+python train_CFE_model.py --alter_class 198
+python train_CFE_model.py --alter_class 199
 
 
 python train_CFE_model.py --alter_class 100
@@ -191,6 +201,7 @@ python train_CFE_model.py --alter_class 186
 python train_CFE_model.py --alter_class 187
 python train_CFE_model.py --alter_class 188
 python train_CFE_model.py --alter_class 189
+
 python train_CFE_model.py --alter_class 190
 python train_CFE_model.py --alter_class 191
 python train_CFE_model.py --alter_class 192

@@ -1,5 +1,5 @@
 
- Namespace(filter_visualization=True, user_evaluation=False, train_counterfactual_net=True, train_all_classes=True, train_singular_counterfactual_net=False, choose_subclass=False, counterfactual_PP=True, resume_counterfactual_net=False, test_counterfactual_net=False, load_counterfactual_net=True, resume=True, alter_class=0, analysis_class=9, find_global_filters=False, alter_class_2=0, cfe_epochs=3, l1_weight=2, save_logFile=True, dataset='CUB200', save_directory='./trained_weights/', train_using_builtin_fit_method=True, train=False, fine_tune=False, test=False, model='VGG16/', imagenet_weights=True) 
+ Namespace(filter_visualization=True, user_evaluation=False, train_counterfactual_net=True, train_all_classes=True, train_singular_counterfactual_net=False, choose_subclass=False, counterfactual_PP=True, resume_counterfactual_net=False, test_counterfactual_net=False, load_counterfactual_net=True, resume=True, alter_class=84, analysis_class=9, find_global_filters=False, alter_class_2=0, cfe_epochs=3, l1_weight=2, save_logFile=True, dataset='CUB200', save_directory='./trained_weights/', train_using_builtin_fit_method=True, train=False, fine_tune=False, test=False, model='VGG16/', imagenet_weights=True) 
 
 Model: "base_model"
 __________________________________________________________________________________________________
@@ -61,9 +61,9 @@ ________________________________________________________________________________
 weights loaded
 threshold:  0.5
 l1 weight:  2
-training CF model for alter class:  001.Black_footed_Albatross
+training CF model for alter class:  085.Horned_Lark
 Training CF model for PPs
-training for fixed alter class:  001.Black_footed_Albatross
+training for fixed alter class:  085.Horned_Lark
 Model: "model"
 __________________________________________________________________________________________________
 Layer (type)                    Output Shape         Param #     Connected to                     
@@ -79,6 +79,6 @@ Total params: 15,079,944
 Trainable params: 262,656
 Non-trainable params: 14,817,288
 __________________________________________________________________________________________________
-  0%|                                                                                          | 0/338 [00:00<?, ?it/s]epoch 0: 100%|#| 338/338 [03:05<00:00,  1.82it/s, acc=0.869, loss=[1.4371597, 2.6060803, -0.15865067, 0.0, 93.27312, 0.
-  0%|                                                                                          | 0/338 [00:00<?, ?it/s]epoch 1: 100%|#| 338/338 [02:48<00:00,  2.01it/s, acc=0.992, loss=[0.51923954, 1.2615737, -0.1444996, 0.0, 44.381287, 0
-  0%|                                                                                          | 0/338 [00:00<?, ?it/s]epoch 2: 100%|#| 338/338 [02:48<00:00,  2.00it/s, acc=0.995, loss=[0.49953696, 1.1053045, -0.14512184, 0.0, 38.22781, 0
+  0%|                                                                                                       | 0/338 [00:00<?, ?it/s]epoch 0: 100%|#############| 338/338 [03:02<00:00,  1.85it/s, acc=0.862, loss=[1.477509, 2.5084183, -0.1687661, 0.0, 89.95895, 0.0]]
+  0%|                                                                                                       | 0/338 [00:00<?, ?it/s]epoch 1: 100%|###########| 338/338 [02:46<00:00,  2.03it/s, acc=0.986, loss=[0.5017717, 1.1942189, -0.1560218, 0.0, 42.334503, 0.0]]
+  0%|                                                                                                       | 0/338 [00:00<?, ?it/s]epoch 2: 100%|#######| 338/338 [1:25:20<00:00, 15.15s/it, acc=0.992, loss=[0.48686272, 1.0071303, -0.15480399, 0.0, 35.212833, 0.0]]

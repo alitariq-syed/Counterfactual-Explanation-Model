@@ -34,15 +34,16 @@ parser.add_argument('--train_singular_counterfactual_net' ,default = False, type
 parser.add_argument('--choose_subclass' ,default = False, type=str2bool)## choose subclass for training on
 
 parser.add_argument('--counterfactual_PP' ,default = True, type=str2bool)## whether to generate filters for PP  or PN case 
-parser.add_argument('--resume_counterfactual_net' ,default = False, type=str2bool)## False = train CF model from scratch; True = resume training CF model
+parser.add_argument('--resume_counterfactual_net' ,default = True, type=str2bool)## False = train CF model from scratch; True = resume training CF model
+parser.add_argument('--resume_from_epoch' ,default = 3, type=np.int32)## False = train CF model from scratch; True = resume training CF model
 parser.add_argument('--test_counterfactual_net' ,default = False, type=str2bool)## 
 parser.add_argument('--load_counterfactual_net',default = True, type=str2bool)
 parser.add_argument('--resume', default =True, type=str2bool) # load saved weights for base model
 parser.add_argument('--alter_class', default = 9, type = np.int32) # alter class #misclassified classes 9-170
 parser.add_argument('--analysis_class', default = 9, type = np.int32) # class for which images are loaded and analyzed
 parser.add_argument('--find_global_filters', default = False, type=str2bool) # perform statistical analysis to find the activation magnitude of all filters for the alter class and train images of alter class
-parser.add_argument('--alter_class_2', default = 0, type = np.int32) # alter class for 2nd example, 9, 170, 25, 125, 108
-parser.add_argument('--cfe_epochs', default = 3, type = np.int32 ) #100 for mnist, 200 for CUB
+#parser.add_argument('--alter_class_2', default = 0, type = np.int32) # alter class for 2nd example, 9, 170, 25, 125, 108
+parser.add_argument('--cfe_epochs', default = 10, type = np.int32 ) #100 for mnist, 200 for CUB
 parser.add_argument('--l1_weight', default = 2, type = np.float32) # 2 default
 parser.add_argument('--save_logFile', default = True, type=str2bool) #
 
@@ -59,7 +60,7 @@ parser.add_argument('--test', default = False)
 parser.add_argument('--model',default = 'VGG16/')#myCNN, VGG16, resnet50,efficientnet, inceptionv3
 parser.add_argument('--imagenet_weights',default = True) #use imageNet pretrained weights (True for CUB dataset)
 
-KAGGLE = True
+KAGGLE = False
 
 if KAGGLE: 
     args = parser.parse_known_args()[0]
@@ -69,6 +70,7 @@ else:
 
 if args.train_all_classes:
     weights_path = args.save_directory+args.model+args.dataset+'/all_clases/epochs_'+str(args.cfe_epochs)
+    resume_path = args.save_directory+args.model+args.dataset+'/all_clases/epochs_'+str(args.resume_from_epoch)
     pretrained_weights_path = args.save_directory+args.model+args.dataset+'/standard'
 else:
     weights_path = args.save_directory+args.model+args.dataset+'/standard'

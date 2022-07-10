@@ -66,13 +66,11 @@ def my_filter_count(x):
 #%%
 @tf.function 
 def train_step(x_batch_test, alter_class, combined, W,base_model,L1_weight,PP_mode,for_alter_class):
-    if PP_mode:
-        default_fmatrix = tf.ones((x_batch_test.shape[0],base_model.output[1].shape[3]))#512=generator.output.shape[1]
-    else:
-        default_fmatrix = tf.zeros((x_batch_test.shape[0],base_model.output[1].shape[3]))#512=generator.output.shape[1]
+    # if PP_mode:
+    #     default_fmatrix = tf.ones((x_batch_test.shape[0],base_model.output[1].shape[3]))
+    # else:
+    #     default_fmatrix = tf.zeros((x_batch_test.shape[0],base_model.output[1].shape[3]))
 
-
-    # index_for_pre_softmax = tf.stack([tf.range(x_batch_test.shape[0],dtype='int64'),tf.argmax(alter_class, axis=1)],1)
 
     with tf.GradientTape(persistent=False) as tape: #persistent=False  Boolean controlling whether a persistent gradient tape is created. False by default, which means at most one call can be made to the gradient() method on this object. 
     
@@ -142,7 +140,7 @@ def test_step(x_batch_test, alter_class, combined, W,base_model,L1_weight,PP_mod
     
     
 #%%
-def train_counterfactual_net(model,weights_path, generator, train_gen,test,resume,epochs,L1_weight,for_class,label_map,logging,args):
+def train_counterfactual_net(model,weights_path,resume_path, generator, train_gen,test,resume,epochs,L1_weight,for_class,label_map,logging,args):
     #assumption: its a standrd model, not interpretable model
    
     if args.counterfactual_PP:
@@ -172,19 +170,27 @@ def train_counterfactual_net(model,weights_path, generator, train_gen,test,resum
         print('training for ALL class')
 
     
+    start_epoch=0
     if resume:
+        start_epoch = args.resume_from_epoch
         if for_alter_class:
             if args.choose_subclass:
-                generator.load_weights(filepath=weights_path+'/counterfactual_combined_model_only_'+str(label_map[for_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
+                generator.load_weights(filepath=resume_path+'/counterfactual_generator_model_only_'+str(label_map[for_class])+'_alter_class_epochs_'+str(args.resume_from_epoch)+'.hdf5')
             else:
-                generator.load_weights(filepath=weights_path+'/'+mode+'counterfactual_combined_model_fixed_'+str(label_map[for_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
+                generator.load_weights(filepath=resume_path+'/'+mode+'counterfactual_generator_model_fixed_'+str(label_map[for_class])+'_alter_class_epochs_'+str(args.resume_from_epoch)+'.hdf5') #resume from epochs 3 #args.cfe_epochs
         else:
-            generator.load_weights(filepath=weights_path+'/counterfactual_combined_model_ALL_classes_epoch_68_16_batch.hdf5')
+            generator.load_weights(filepath=resume_path+'/counterfactual_combined_model_ALL_classes_epoch_68_16_batch.hdf5')
+            
             
     img = tf.keras.Input(shape=model.input_shape[0][1:4])
     
     fmatrix = generator(img)
     
+    #########################
+    #binarization here is not reducing loss during training. So only use it for test time and not for training
+    #fmatrix = tf.where(fmatrix > 0, 1.0, 0.0)
+    #########################
+
     alter_prediction,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax = model([img,fmatrix])
     
     
@@ -208,17 +214,12 @@ def train_counterfactual_net(model,weights_path, generator, train_gen,test,resum
     #default_fmatrix = tf.ones((train_gen.batch_size,generator.output.shape[1]))
     if logging: interval = 10000
     else: interval = 0.1
+    
+    Weight = 1
 
     if not test:
-        Weight=20 # not used
-        for epoch in range(0, epochs):
+        for epoch in range(start_epoch, epochs):
           #print('Start of epoch %d' % (epoch,))
-              
-            if epoch<3:
-                Weight =1# Weight/2 #10-epoch
-                #print('weight for BCE loss:', Weight)
-            else:
-                Weight = 1
             
             #for step,(x_batch_train, y_batch_train) in enumerate(dataset):
             with tqdm(total=batches, file=sys.stdout,mininterval=interval) as progBar:
@@ -233,12 +234,12 @@ def train_counterfactual_net(model,weights_path, generator, train_gen,test,resum
                       #y_batch_test_2[:,3] = y_batch_test[:,1]
                       y_batch_test=y_batch_test_2
                   
-                  if args.counterfactual_PP:
-                      default_fmatrix = tf.ones((len(x_batch_test),generator.output.shape[1]))
-                  else:
-                      #default_fmatrix = tf.zeros((len(x_batch_test),generator.output[0].shape[1]))
-                      default_fmatrix = tf.zeros((len(x_batch_test),generator.output.shape[1]))
-                  predictions,fmaps,_ ,_,pre_softmax= model([x_batch_test,default_fmatrix], training=False)
+                  # if args.counterfactual_PP:
+                  #     default_fmatrix = tf.ones((len(x_batch_test),generator.output.shape[1]))
+                  # else:
+                  #     #default_fmatrix = tf.zeros((len(x_batch_test),generator.output[0].shape[1]))
+                  #     default_fmatrix = tf.zeros((len(x_batch_test),generator.output.shape[1]))
+                  #predictions,fmaps,_ ,_,pre_softmax= model([x_batch_test,default_fmatrix], training=False)
                   
                   #it can be wrong predictions
                   #better to choose real class prediction

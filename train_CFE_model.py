@@ -27,7 +27,7 @@ import os, sys
 from codes.train_counterfactual_net import train_counterfactual_net
 #%%
 
-from config import args, weights_path, KAGGLE, pretrained_weights_path
+from config import args, weights_path, KAGGLE, pretrained_weights_path,resume_path
 from load_data import top_activation, num_classes, train_gen, label_map
 from load_base_model import base_model
 
@@ -63,7 +63,7 @@ if args.train_all_classes and KAGGLE:
     start_class=100
 else:
     classes = 1
-    start_class=0
+    start_class= 0 #args2.alter_class
     args.alter_class = args2.alter_class
 
 
@@ -72,7 +72,7 @@ for loop in range(start_class, classes):
     # tf.compat.v1.reset_default_graph()
 
     
-    if args.train_all_classes:
+    if args.train_all_classes and KAGGLE:
         args.alter_class = loop
         
     if logging: 
@@ -240,7 +240,7 @@ for loop in range(start_class, classes):
     else:
         print("training singular CF model for all classes")
 
-    combined, generator = train_counterfactual_net(model,weights_path, counterfactual_generator, train_gen,args.test_counterfactual_net, args.resume_counterfactual_net,epochs=cf_epochs,L1_weight=L1_weight,for_class=for_class,label_map=label_map,logging=logging,args=args) 
+    combined, generator = train_counterfactual_net(model,weights_path,resume_path, counterfactual_generator, train_gen,args.test_counterfactual_net, args.resume_counterfactual_net,epochs=cf_epochs,L1_weight=L1_weight,for_class=for_class,label_map=label_map,logging=logging,args=args) 
     #sys.modules[__name__].__dict__.clear()
     #os._exit(00)
 
