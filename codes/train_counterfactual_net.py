@@ -59,9 +59,8 @@ def my_l1_loss_pre_Softmax(x):
 
 def my_filter_count(x):
     #x = filter matrix
-    non_zero_in_batch = tf.math.count_nonzero(x)
-    #divide by batch size
-    non_zero = non_zero_in_batch/x.shape[0]
+    non_zero_in_batch = tf.math.count_nonzero(x,1,dtype='float32')
+    non_zero = tf.math.reduce_mean(non_zero_in_batch)
     return non_zero   
 #%%
 @tf.function 

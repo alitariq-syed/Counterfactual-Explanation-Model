@@ -138,12 +138,11 @@ for k in range(batches):
                 #combined.load_weights(filepath=weights_path+'/counterfactual_generator_model_fixed_'+str(label_map[cand_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
     
                 alter_prediction,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,alter_pre_softmax = combined(np.expand_dims(x_batch_test[img_ind],0))
-                filters_off = fmatrix
                 
                 #t_fmatrix = binarize(filters_off, threshold=0.0, copy=True)
-                t_fmatrix = tf.where(fmatrix > 0, 1, 0)
+                #t_fmatrix = tf.where(fmatrix > 0, 1, 0)
                 
-                alter_probs, c_fmaps, c_mean_fmap, c_modified_mean_fmap_activations,alter_pre_softmax = model([np.expand_dims(x_batch_test[img_ind],0),t_fmatrix])#with eager
+                alter_probs, c_fmaps, c_mean_fmap, c_modified_mean_fmap_activations,alter_pre_softmax = model([np.expand_dims(x_batch_test[img_ind],0),fmatrix])#with eager
                 c_modified_mean_fmap_activations=c_modified_mean_fmap_activations[0]
             #%%
             common_filters_count = find_agreement_global_MC(pred_MC=c_modified_mean_fmap_activations, target_class=cand_class, args=args,class_name =label_map[cand_class],class_weights=W[:,cand_class] )

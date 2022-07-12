@@ -33,6 +33,7 @@ from codes.support_functions import restore_original_image_from_array
 from config import args, weights_path, KAGGLE, pretrained_weights_path
 from load_data import top_activation, num_classes, train_gen, label_map
 from load_base_model import base_model
+from load_CFE_model import model, load_cfe_model, fmatrix
 
 #%%
 np.random.seed(seed=100)
@@ -44,104 +45,6 @@ assert(args.counterfactual_PP)
 assert(args.train_all_classes)
 
 #%% create base model
-top_filters = base_model.output_shape[3] # flters in top conv layer (512 for VGG)
-fmatrix = tf.keras.layers.Input(shape=(top_filters),name='fmatrix')
-#flag = tf.keras.layers.Input(shape=(1))
-
-if args.model == 'VGG16/' or args.model == 'myCNN/':
-    x =  MaxPool2D()(base_model.output)
-elif args.model == 'resnet50/':
-    x =  base_model.output
-elif args.model == 'efficientnet/':
-    x =  base_model.output
-mean_fmap = GlobalAveragePooling2D()(x)
-
-
-#modify base model (once it has been pre-trained separately) to be used with CF model later
-if args.counterfactual_PP:
-    modified_fmap = mean_fmap*fmatrix
-else:#PN
-    modified_fmap = mean_fmap+fmatrix
-pre_softmax = Dense(num_classes,activation=None)(modified_fmap)
-out = tf.keras.layers.Activation(top_activation)(pre_softmax)
-model = tf.keras.Model(inputs=[base_model.input, fmatrix], outputs= [out,base_model.output, mean_fmap, modified_fmap,pre_softmax],name='base_model')
-
-if args.counterfactual_PP:
-    default_fmatrix = tf.ones((train_gen.batch_size,base_model.output.shape[3]))
-else:
-    default_fmatrix = tf.zeros((train_gen.batch_size,base_model.output.shape[3]))
-
-
-#model.summary()
-
-#load saved weights
-if args.model =='myCNN/':
-    model.load_weights(filepath=pretrained_weights_path+'/model_transfer_epoch_50.hdf5')
-else:
-    model.load_weights(filepath=pretrained_weights_path+'/model_fine_tune_epoch_150.hdf5')
-
-print("base model weights loaded")
-
-#%%
-W = model.weights[-2]
-act_threshold=-0.15
-plt.plot(W.numpy()), plt.title('Weights'), plt.legend(['cat','dog']),
-plt.hlines(act_threshold,xmin=0,xmax=512,colors='r'),plt.show()
-
-important_filter_weights_1 = np.where(W[:,0]<=act_threshold)
-important_filter_weights_2 = np.where(W[:,1]<=act_threshold)
-
-
-#%% create CFE model
-num_filters = model.output[1].shape[3]
-model.trainable = False
-
-if args.model == 'VGG16/' or args.model == 'myCNN/':
-    x =  MaxPool2D()(base_model.output)
-elif args.model == 'resnet50/':
-    x =  base_model.output
-elif args.model == 'efficientnet/':
-    x =  base_model.output
-mean_fmap = GlobalAveragePooling2D()(x)
-
-if args.counterfactual_PP:
-    x = Dense(num_filters,activation='sigmoid')(mean_fmap)#kernel_regularizer='l1' #,activity_regularizer='l1'
-else:
-    x = Dense(num_filters,activation='relu')(mean_fmap)
-
-
-thresh=0.5
-PP_filter_matrix = tf.keras.layers.ThresholdedReLU(theta=thresh)(x)
-
-
-
-counterfactual_generator = tf.keras.Model(inputs=base_model.input, outputs= [PP_filter_matrix],name='counterfactual_model')
-
-
-def load_cfe_model():
-    if not args.train_singular_counterfactual_net:
-        if args.choose_subclass:
-            counterfactual_generator.load_weights(filepath=weights_path+'/counterfactual_generator_model_only_010.Red_winged_Blackbird_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
-        else:                
-            if args.counterfactual_PP:
-                mode = '' 
-                print("Loading CF model for PPs")
-            else:
-                mode = 'PN_'
-                print("Loading CF model for PNs")
-            counterfactual_generator.load_weights(filepath=weights_path+'/'+mode+'counterfactual_generator_model_fixed_'+str(label_map[args.alter_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
-    else:
-        counterfactual_generator.load_weights(filepath=weights_path+'/counterfactual_generator_model_ALL_classes_epoch_131.hdf5')
-        
-    model.trainable = False
-    img = tf.keras.Input(shape=model.input_shape[0][1:4])
-
-    fmatrix = counterfactual_generator(img)
-
-    alter_prediction,fmaps,mean_fmap, modified_mean_fmap_activations,pre_softmax = model([img,fmatrix])
-    
-    combined = tf.keras.Model(inputs=img, outputs=[alter_prediction,fmatrix,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax])
-    return combined
 
     
 #%%
@@ -163,9 +66,7 @@ for loop in range(num_classes):#range(1):#num_classes):
     print ('alter class: ', label_map[alter_class])
     #print ('class 2: ', label_map[args.alter_class_2])
     
-    weights_alter_class = W[:,alter_class]
-    plt.plot(weights_alter_class),plt.title("weight alter class "+str(alter_class)),plt.show()
-    
+   
     if args.dataset == 'CUB200' or args.dataset == 'BraTS' or args.dataset == 'NIST': 
         test_gen =train_gen #if args.find_global_filters else actual_test_gen# train_gen#actual_test_gen
         #test_gen_nopreprocess = train_gen_nopreprocess if args.find_global_filters else actual_test_gen_nopreprocess #train_gen_nopreprocess[0]#actual_test_gen_nopreprocess
@@ -199,6 +100,8 @@ for loop in range(num_classes):#range(1):#num_classes):
 
             
         x_batch_test,y_batch_test = next(gen)
+        default_fmatrix = tf.ones((len(x_batch_test),base_model.output.shape[3]))
+        
         
         if args.find_global_filters:
             if gen.batch_index < alter_class_starting_batch and gen.batch_index >0:

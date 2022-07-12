@@ -27,7 +27,7 @@ parser.add_argument('--filter_visualization' ,default = True,type=str2bool) # fi
 parser.add_argument('--user_evaluation' ,default = False,type=str2bool) # save images
 
 # CF model args
-parser.add_argument('--train_counterfactual_net' ,default = True, type=str2bool)## 
+parser.add_argument('--train_counterfactual_net' ,default = False, type=str2bool)## 
 parser.add_argument('--train_all_classes' ,default = True, type=str2bool)## 
 
 parser.add_argument('--train_singular_counterfactual_net' ,default = False, type=str2bool)## 
@@ -35,7 +35,7 @@ parser.add_argument('--choose_subclass' ,default = False, type=str2bool)## choos
 
 parser.add_argument('--counterfactual_PP' ,default = True, type=str2bool)## whether to generate filters for PP  or PN case 
 parser.add_argument('--resume_counterfactual_net' ,default = True, type=str2bool)## False = train CF model from scratch; True = resume training CF model
-parser.add_argument('--resume_from_epoch' ,default = 9, type=np.int32)## False = train CF model from scratch; True = resume training CF model
+parser.add_argument('--resume_from_epoch' ,default = 10, type=np.int32)## False = train CF model from scratch; True = resume training CF model
 parser.add_argument('--test_counterfactual_net' ,default = False, type=str2bool)## 
 parser.add_argument('--load_counterfactual_net',default = True, type=str2bool)
 parser.add_argument('--resume', default =True, type=str2bool) # load saved weights for base model
@@ -60,7 +60,7 @@ parser.add_argument('--test', default = False)
 parser.add_argument('--model',default = 'VGG16/')#myCNN, VGG16, resnet50,efficientnet, inceptionv3
 parser.add_argument('--imagenet_weights',default = True) #use imageNet pretrained weights (True for CUB dataset)
 
-KAGGLE = True
+KAGGLE = False
 
 if KAGGLE: 
     args = parser.parse_known_args()[0]
