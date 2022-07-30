@@ -171,7 +171,7 @@ for k in range(batches):
         inferred_class = np.argmax(pred_probs[0])
         args.alter_class = inferred_class
         alter_class = args.alter_class
-        #alter_class = inferred_class
+        alter_class = inferred_class
         if loaded_cfe_model==inferred_class:
             pass
         else:
@@ -217,10 +217,8 @@ for k in range(batches):
         #fmatrix = counterfactual_generator(np.expand_dims(x_batch_test[img_ind],0))
         if args.counterfactual_PP:
             alter_probs,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,alter_pre_softmax = combined(np.expand_dims(x_batch_test[img_ind],0))
-            filters_off = fmatrix
         else:
             alter_probs,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,alter_pre_softmax,PN_add = combined(np.expand_dims(x_batch_test[img_ind],0))
-            filters_off = PN_add
         
         #alter_probs, c_fmaps, c_mean_fmap, c_modified_mean_fmap_activations,alter_pre_softmax = model([np.expand_dims(x_batch_test[img_ind],0),filters_off])#with eager
         
@@ -260,13 +258,7 @@ for k in range(batches):
         #%%
         apply_thresh = True
         if apply_thresh:
-            # t_fmatrix = filters_off.numpy()
-            # if args.counterfactual_PP:
-            #     for i in tf.where(filters_off>0):
-            #         t_fmatrix[tuple(i)]=1.0
-            #     t_fmatrix = tf.convert_to_tensor(t_fmatrix)
-            # alter_probs, c_fmaps, c_mean_fmap, c_modified_mean_fmap_activations,alter_pre_softmax = model([np.expand_dims(x_batch_test[img_ind],0),t_fmatrix])#with eager
-            
+
             print('\nthresholded counterfactual')
             print( 'gt class: ',label_map[np.argmax(y_gt)], '  prob: ',alter_probs[0][np.argmax(y_gt)].numpy()*100,'%')
             print( 'alter class: ',label_map[alter_class], '  prob: ',alter_probs[0][alter_class].numpy()*100,'%')
@@ -305,6 +297,16 @@ for k in range(batches):
             if not args.counterfactual_PP:
                 plt.plot(PN_add[0],color='red')
                 plt.plot(mean_fmap[0]), plt.title('PN_additions'),plt.ylim([0, np.max(mean_fmap)+1]), plt.show()
+        
+        #%% disabled PP prediction:
+        # enabled_filters = 1- fmatrix[0]
+        # dis_alter_probs, dis_fmaps, dis_mean_fmap, dis_modified_mean_fmap_activations,dis_alter_pre_softmax = model([np.expand_dims(x_batch_test[img_ind],0),enabled_filters])#with eager
+             
+        # print('\nDisabled PP prediction')
+        # print( 'pred class: ',label_map[np.argmax(dis_alter_probs)], '  prob: ',dis_alter_probs[0][np.argmax(dis_alter_probs)].numpy()*100,'%')
+        # print( 'gt class: ',label_map[np.argmax(y_gt)], '  prob: ',dis_alter_probs[0][np.argmax(y_gt)].numpy()*100,'%')
+        # print( 'inferred class: ',label_map[inferred_class], '  prob: ',dis_alter_probs[0][inferred_class].numpy()*100,'%')
+
         #%% model debugging misclassification analysis
         #compare MC filters of inferred class with the global MC filters of inferred and top-3 classes to find agreement with the inferred class or other classes
         if True:
@@ -312,7 +314,7 @@ for k in range(batches):
             
             selected_probs = pred_probs # alter_probs #pred_probs
             top_3_candidate_classes= []
-            k=5
+            k=3
             ind = np.argpartition(selected_probs[0], -k)[-k:]
             ind = ind[np.argsort(selected_probs[0].numpy()[ind])]                
             for i in range(k):
@@ -326,15 +328,16 @@ for k in range(batches):
             for cand_class in top_3_candidate_classes:#range(200):#top_3_candidate_classes:
                 #find agreement with global MC of each class
                 #%%
-                # args.alter_class = cand_class
-                # alter_class = cand_class
-                # if loaded_cfe_model==cand_class:
-                #     pass
-                # else:
-                #     combined = load_cfe_model()
-                #     loaded_cfe_model=cand_class
-
-                # alter_prediction,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,alter_pre_softmax = combined(np.expand_dims(x_batch_test[img_ind],0))
+                if len(top_3_candidate_classes)>1:
+                    args.alter_class = cand_class
+                    alter_class = cand_class
+                    if loaded_cfe_model==cand_class:
+                        pass
+                    else:
+                        combined = load_cfe_model()
+                        loaded_cfe_model=cand_class
+    
+                    alter_prediction,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,alter_pre_softmax = combined(np.expand_dims(x_batch_test[img_ind],0))
                 #%%
                 common_filters_count = find_agreement_global_MC(pred_MC=modified_mean_fmap_activations[0], target_class=cand_class, args=args,class_name =label_map[cand_class],class_weights=W[:,cand_class] )
                 scores.append(common_filters_count)

@@ -247,7 +247,7 @@ for loop in range(start_class, classes):
     # if logging: 
     #     sys.stdout.close() #= open(file=weights_path+"/console_output_"+str(args.alter_class)+".txt", mode="w")    
             
-    tf.keras.backend.clear_session()
+    #tf.keras.backend.clear_session()
 
     # del combined
     # del generator

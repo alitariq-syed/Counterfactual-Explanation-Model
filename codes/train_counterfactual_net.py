@@ -197,6 +197,7 @@ def train_counterfactual_net(model,weights_path,resume_path, generator, train_ge
     combined.compile(loss='binary_crossentropy', optimizer=optimizer)
     combined.summary()
     
+
     #VOC-dataset
     #label_map = ['bird',  'cat', 'cow', 'dog', 'horse', 'sheep']
     #label_map = ['cat', 'dog'] #catvsdog dataset
@@ -255,11 +256,11 @@ def train_counterfactual_net(model,weights_path,resume_path, generator, train_ge
     
                   train_step(x_batch_test, alter_class,combined,Weight,model,L1_weight,args.counterfactual_PP, for_alter_class)
                  
-                  
-                  progBar.set_description('epoch %d' % (epoch),refresh=False)
-                  progBar.set_postfix(loss=[train_loss_metric.result().numpy(),train_loss_metric_2.result().numpy(),train_loss_metric_3.result().numpy(),train_loss_metric_4.result().numpy(), train_loss_metric_5.result().numpy(),train_loss_metric_6.result().numpy()], acc=train_acc_metric.result().numpy(),refresh=False)
-    
-                  progBar.update()
+                  if (args.choose_subclass or True):
+                      progBar.set_description('epoch %d' % (epoch),refresh=False)
+                      progBar.set_postfix(loss=[train_loss_metric.result().numpy(),train_loss_metric_2.result().numpy(),train_loss_metric_3.result().numpy(),train_loss_metric_4.result().numpy(), train_loss_metric_5.result().numpy(),train_loss_metric_6.result().numpy()], acc=train_acc_metric.result().numpy(),refresh=False)
+        
+                      progBar.update()
              
                 #end for
             #end with
@@ -269,7 +270,7 @@ def train_counterfactual_net(model,weights_path,resume_path, generator, train_ge
                     generator.save_weights(filepath=weights_path+'/'+mode+'counterfactual_generator_model_fixed_'+str(label_map[for_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
                 else:
                     pass
-                    if epoch%10 ==0:
+                    if epoch%100 ==0:
                         generator.save_weights(filepath=weights_path+'/counterfactual_generator_model_only_'+str(label_map[for_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
             else:
                 generator.save_weights(filepath=weights_path+'/'+mode+'counterfactual_generator_model_ALL_classes_epoch_'+str(epoch)+'.hdf5')

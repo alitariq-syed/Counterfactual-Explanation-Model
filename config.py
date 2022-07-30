@@ -27,7 +27,7 @@ parser.add_argument('--filter_visualization' ,default = True,type=str2bool) # fi
 parser.add_argument('--user_evaluation' ,default = False,type=str2bool) # save images
 
 # CF model args
-parser.add_argument('--train_counterfactual_net' ,default = False, type=str2bool)## 
+parser.add_argument('--train_counterfactual_net' ,default = True, type=str2bool)## 
 parser.add_argument('--train_all_classes' ,default = True, type=str2bool)## 
 
 parser.add_argument('--train_singular_counterfactual_net' ,default = False, type=str2bool)## 
@@ -45,7 +45,7 @@ parser.add_argument('--find_global_filters', default = False, type=str2bool) # p
 #parser.add_argument('--alter_class_2', default = 0, type = np.int32) # alter class for 2nd example, 9, 170, 25, 125, 108
 parser.add_argument('--cfe_epochs', default = 10, type = np.int32 ) #100 for mnist, 200 for CUB
 parser.add_argument('--l1_weight', default = 2, type = np.float32) # 2 default
-parser.add_argument('--save_logFile', default = True, type=str2bool) #
+parser.add_argument('--save_logFile', default = False, type=str2bool) #
 
 #parser.add_argument('--pretrained', default = False) # load self-pretrained model for cifar dataset... i.e. load base model already trained on cifar-10
 
@@ -69,7 +69,7 @@ if KAGGLE:
 else: 
     args = parser.parse_args()
 
-if args.train_all_classes:
+if (args.train_counterfactual_net and args.train_all_classes):
     weights_path = args.save_directory+args.model+args.dataset+'/all_clases/epochs_'+str(args.cfe_epochs)
     if KAGGLE:
         resume_path = kaggle_load_dir+args.model+args.dataset+'/all_clases/epochs_'+str(args.resume_from_epoch)

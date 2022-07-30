@@ -35,7 +35,7 @@ from codes.find_agreement_global_MC import find_agreement_global_MC
 from config import args, weights_path, KAGGLE, pretrained_weights_path
 from load_data import top_activation, num_classes, train_gen, label_map, actual_test_gen
 from load_base_model import base_model
-from load_cfe_model import load_cfe_model
+from load_CFE_model import load_cfe_model
 #%%
 np.random.seed(seed=100)
 
@@ -72,10 +72,10 @@ wrong_pred_still_wrong=0
 all_class_MC_filters=[]
 all_class_MC_probs = []
 start = time.time()
-for loop in range(62,num_classes):#range(1):#num_classes):
+for loop in range(num_classes):#range(1):#num_classes):
     args.alter_class = loop#9#loop
     
-    assert(False)#verify if model is loaded with alter_class from above line; or does it require passing the class
+    #assert(False)#verify if model is loaded with alter_class from above line; or does it require passing the class
     
     combined = load_cfe_model()
     gen.reset()

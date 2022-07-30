@@ -94,8 +94,6 @@ def load_cfe_model():
                 mode = 'PN_'
                 print("Loading CF model for PNs")
             counterfactual_generator.load_weights(filepath=weights_path+'/'+mode+'counterfactual_generator_model_fixed_'+str(label_map[args.alter_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
-    else:
-        counterfactual_generator.load_weights(filepath=weights_path+'/counterfactual_generator_model_ALL_classes_epoch_131.hdf5')
         
     model.trainable = False
     img = tf.keras.Input(shape=model.input_shape[0][1:4])
@@ -103,9 +101,13 @@ def load_cfe_model():
     fmatrix = counterfactual_generator(img)
     
     #binarization here is not reducing loss during training. So only use it for test time and not for training
-    fmatrix = tf.where(fmatrix > 0, 1, 0)
+    fmatrix = tf.where(fmatrix > 0, 1.0, 0.0)
 
     alter_prediction,fmaps,mean_fmap, modified_mean_fmap_activations,pre_softmax = model([img,fmatrix])
     
     combined = tf.keras.Model(inputs=img, outputs=[alter_prediction,fmatrix,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax])
+    
+    if args.train_singular_counterfactual_net:
+        combined.load_weights(filepath=weights_path+'/counterfactual_combined_model_ALL_classes_epoch_131.hdf5')
+
     return combined

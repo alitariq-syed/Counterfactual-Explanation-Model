@@ -24,10 +24,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os, sys
 import math
+import time
 from tf_explain_modified.core.grad_cam import GradCAM
-
+import warnings
 #%%
 from codes.support_functions import restore_original_image_from_array
+from codes.find_agreement_global_MC import find_agreement_global_MC
 
 #%%
 from config import args, weights_path, KAGGLE, pretrained_weights_path
@@ -46,24 +48,36 @@ assert(args.train_all_classes)
 
 #%% create base model
 
-    
+W = model.weights[-2]
+
 #%%
 explainer = GradCAM()
-misclassification_analysis = False
 
 wrong_inferred_predictions = 0
 wrong_CFE_MC_inferred_predictions = 0
 low_confidence_predictions = 0
 total_images_in_MC_global_filters=0
-for loop in range(num_classes):#range(1):#num_classes):
-    args.alter_class = loop#9#loop
+disabled_MC_filters=0
+start = time.time()
+enable_prints=False
 
+all_classes=True
+if all_classes:
+    print("checking all_classes")
+    selected_classes = range(200)
+else:
+    print("checking selected_classes")    
+    selected_classes = [9,25,108,125,170]
+
+for loop in selected_classes:#range(num_classes):#range(1):#num_classes):
+    args.alter_class = loop#9#loop
+    metrics_aggregate = []
     combined = load_cfe_model()
 
     class_for_analysis = args.alter_class#args.analysis_class#9#9 170#np.random.randint(200)#23#11 #cat for VOC dataset
     alter_class=args.alter_class
     # print ('class for analysis: ', label_map[class_for_analysis])
-    print ('alter class: ', label_map[alter_class])
+    print ('\nalter class: ', label_map[alter_class])
     #print ('class 2: ', label_map[args.alter_class_2])
     
    
@@ -119,10 +133,6 @@ for loop in range(num_classes):#range(1):#num_classes):
             else:
                 actual_img_ind = i + (gen.batch_index-1)*gen.batch_size
             
-            if misclassification_analysis:
-                if actual_img_ind != 240:#240, 241 wrong for class 9; 655 for 25
-                    print('skipping img_ind:',actual_img_ind)
-                    continue
                     
 
             y_gt = y_batch_test[img_ind]
@@ -156,9 +166,9 @@ for loop in range(num_classes):#range(1):#num_classes):
                                  
 
                 if np.argmax(pred_probs) != np.argmax(y_gt) and True:
-                    print("wrong prediction")
+                    if enable_prints: print("wrong prediction")
                     # incorrect_class=np.argmax(pred_probs)
-                    print("skipping wrong prediction")
+                    if enable_prints:print("skipping wrong prediction")
                     filter_sum += 1
                     wrong_inferred_predictions+=1
                     continue
@@ -171,33 +181,18 @@ for loop in range(num_classes):#range(1):#num_classes):
                 skip_low_confidence = True
                 if skip_low_confidence:
                     if pred_probs[0][np.argmax(y_gt)]<0.9:
-                        print("skipping low confidence prediction")
+                        if enable_prints: print("skipping low confidence prediction")
                         filter_sum += 1
                         low_confidence_predictions+=1
                         continue
  
                     
                 alter_prediction,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,alter_pre_softmax = combined(np.expand_dims(x_batch_test[img_ind],0))
-                filters_off = fmatrix
           
-                apply_thresh = True
-                if apply_thresh:
-                    t_fmatrix = filters_off.numpy()
-                    if args.counterfactual_PP:
-                        for i in tf.where(filters_off>0):
-                            t_fmatrix[tuple(i)]=1.0
-                        t_fmatrix = tf.convert_to_tensor(t_fmatrix)
-                    alter_probs, c_fmaps, c_mean_fmap, c_modified_mean_fmap_activations,alter_pre_softmax = model([np.expand_dims(x_batch_test[img_ind],0),t_fmatrix])#with eager
-                    
-                    # print('\nthresholded counterfactual')
-                    # print( 'gt class: ',label_map[np.argmax(y_gt)], '  prob: ',alter_probs[0][np.argmax(y_gt)].numpy()*100,'%')
-                    # print( 'alter class: ',label_map[alter_class], '  prob: ',alter_probs[0][alter_class].numpy()*100,'%')
-
-
-                if np.argmax(alter_probs) != np.argmax(y_gt) and True:
-                    print("wrong CFE model prediction")
+                if np.argmax(alter_prediction) != np.argmax(y_gt) and True:
+                    if enable_prints: print("wrong CFE model prediction")
                     # incorrect_class=np.argmax(pred_probs)
-                    print("skipping wrong MC CFE model prediction")
+                    if enable_prints: print("skipping wrong MC CFE model prediction")
                     filter_sum += 1
                     wrong_CFE_MC_inferred_predictions+=1
                     
@@ -206,27 +201,41 @@ for loop in range(num_classes):#range(1):#num_classes):
                     pass
                     # print("skipping correct prediction")
                     # continue
-                
-                ###############################
-                #previous code
-                # alter_prediction,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,alter_pre_softmax = combined(np.expand_dims(x_batch_test[img_ind],0))                
-            
-                # t_fmatrix = fmatrix.numpy()
-                # for i in tf.where(fmatrix>0):
-                #     t_fmatrix[i]=1.0
-                # t_fmatrix = tf.convert_to_tensor(t_fmatrix)
-                # alter_probs, c_fmaps, c_mean_fmap, c_modified_mean_fmap_activations,alter_pre_softmax = model([np.expand_dims(x_batch_test[img_ind],0),t_fmatrix])#with eager
-                ###############################
+                #%% disabled PP prediction:
 
+                skip_disabled_MC_filters = False
+                if skip_disabled_MC_filters:
+                    enabled_filters = 1- fmatrix[0]
+                    dis_alter_probs, dis_fmaps, dis_mean_fmap, dis_modified_mean_fmap_activations,dis_alter_pre_softmax = model([np.expand_dims(x_batch_test[img_ind],0),enabled_filters])#with eager
+                         
+                    print('\nDisabled PP prediction')
+                    print( 'pred class: ',label_map[np.argmax(dis_alter_probs)], '  prob: ',dis_alter_probs[0][np.argmax(dis_alter_probs)].numpy()*100,'%')
+                    print( 'gt class: ',label_map[np.argmax(y_gt)], '  prob: ',dis_alter_probs[0][np.argmax(y_gt)].numpy()*100,'%')
+
+                    if np.argmax(dis_alter_probs) == np.argmax(alter_prediction):
+                        filter_sum += 1
+                        disabled_MC_filters+=1
+                        continue
+                    
+
+                #%%
                 
-                filter_histogram_cf += t_fmatrix[0]
-                filter_magnitude_cf += c_modified_mean_fmap_activations[0]
+                filter_histogram_cf += fmatrix[0]
+                filter_magnitude_cf += modified_mean_fmap_activations[0]
                 filter_sum += 1
                 # print("image_count",filter_sum)
                 total_images_in_MC_global_filters+=1
                 # sys.stdout.write("\rimage_count %i" % (filter_sum))
                 # sys.stderr.flush()
+                #%%
+                warnings.warn("Make sure that global MC filters are previously extracted in order to find average metrics for martching MC filters with global MC filters")
+                
+                freq_thresh=0.15
+                metrics = find_agreement_global_MC(freq_thresh=freq_thresh,pred_MC=modified_mean_fmap_activations[0], target_class=alter_class, args=args,class_name =label_map[alter_class],class_weights=W[:,alter_class] )
+                metrics_aggregate.append(metrics)
+                #%%
             else:
+                assert(False) # following code not updated
                 #process in batch
                 alter_prediction,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,alter_pre_softmax = combined(x_batch_test)                
             
@@ -272,7 +281,7 @@ for loop in range(num_classes):#range(1):#num_classes):
                 test_image_count = alter_class_images_count
             if filter_sum==alter_class_images_count:#test_image_count[class_for_analysis]:
                 
-                print("\nfinished")
+                if enable_prints: print("\nfinished")
                 # plt.plot(filter_histogram_cf), plt.show()
                 # plt.plot(filter_magnitude_cf), plt.show()
                # plt.plot(filter_magnitude_cf/(filter_histogram_cf+0.00001)), plt.show()
@@ -285,13 +294,15 @@ for loop in range(num_classes):#range(1):#num_classes):
                 if not os.path.exists(save_folder):
                     os.makedirs(save_folder)
                 
-                plt.plot(filter_histogram_cf), plt.ylim([0, np.max(filter_histogram_cf)+1]),plt.xlabel("Filter number"),plt.ylabel("Filter activation count"), plt.savefig(fname=save_folder+mName+"_filter_histogram_cf_alter_class_"+str(alter_class)+"_"+str(class_for_analysis)+"_train_set.png", dpi=300, bbox_inches = 'tight'), plt.show()
-                plt.plot(filter_magnitude_cf/max(filter_histogram_cf)),plt.xlabel("Filter number"),plt.ylabel("Avg. activation magnitude"), plt.ylim([0, np.max(filter_magnitude_cf/np.max(filter_histogram_cf))+1]), plt.savefig(fname=save_folder+mName+"_normalized_filter_magnitude_cf_alter_class_"+str(alter_class)+"_"+str(class_for_analysis)+"_train_set.png", dpi=300, bbox_inches = 'tight'), plt.show()
+                # plt.plot(filter_histogram_cf), plt.ylim([0, np.max(filter_histogram_cf)+1]),plt.xlabel("Filter number"),plt.ylabel("Filter activation count"), plt.savefig(fname=save_folder+mName+"_filter_histogram_cf_alter_class_"+str(alter_class)+"_"+str(class_for_analysis)+"_train_set.png", dpi=300, bbox_inches = 'tight'), plt.show()
+                # plt.plot(filter_magnitude_cf/max(filter_histogram_cf)),plt.xlabel("Filter number"),plt.ylabel("Avg. activation magnitude"), plt.ylim([0, np.max(filter_magnitude_cf/np.max(filter_histogram_cf))+1]), plt.savefig(fname=save_folder+mName+"_normalized_filter_magnitude_cf_alter_class_"+str(alter_class)+"_"+str(class_for_analysis)+"_train_set.png", dpi=300, bbox_inches = 'tight'), plt.show()
                 #plt.plot(filter_magnitude_cf/max(filter_histogram_cf)), plt.ylim([0, np.max(filter_magnitude_cf/max(filter_histogram_cf))+1]), plt.show()
                 
                 np.save(file= save_folder+mName+"_filter_histogram_cf_"+str(alter_class)+"_train_set.np",arr=filter_histogram_cf)
                 np.save(file= save_folder+mName+"_normalized_filter_magnitude_cf_"+str(alter_class)+"_train_set.np", arr=filter_magnitude_cf)
                 
+                metrics_aggregate=np.asarray(metrics_aggregate)
+                np.save(file= save_folder+mName+"_metrics_aggregate_freq_thresh_"+str(freq_thresh)+"_"+str(alter_class)+"_train_set.np", arr=metrics_aggregate)
                 
                 #######################
                 #thresholded stats
@@ -308,7 +319,13 @@ for loop in range(num_classes):#range(1):#num_classes):
         #end batch
         if filter_sum==alter_class_images_count: break
 
+end = time.time()
 print("wrong_inferred_predictions", wrong_inferred_predictions)
 print("wrong_CFE_MC_inferred_predictions", wrong_CFE_MC_inferred_predictions)
 print("low_confidence_predictions", low_confidence_predictions)
 print("total_images_in_MC_global_filters", total_images_in_MC_global_filters)
+
+print("disabled_MC_filters", disabled_MC_filters)
+
+
+print("time taken: ",end - start)

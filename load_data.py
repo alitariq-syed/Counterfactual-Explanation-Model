@@ -22,7 +22,7 @@ from codes.load_cxr_dataset import create_cxr_dataframes, load_cxr_dataset
 if args.dataset =='mnist':
     batch_size = 32
 else:
-    batch_size =16# 16 for analysis, 32 for training
+    batch_size =16 # 16 for analysis, 32 for training
 
 top_activation = 'softmax'
 loss = categorical_crossentropy    
@@ -199,7 +199,10 @@ if args.dataset != 'mnist':
         train_gen = imgDataGen.flow(x_train, y_train, batch_size = batch_size,shuffle= False)
         test_gen  = imgDataGen.flow(x_test, y_test, batch_size = batch_size,shuffle= False)
     elif args.dataset == 'CUB200' or args.dataset == 'BraTS'  or args.dataset == 'NIST':
-        augment = False
+        if args.train and False:
+            augment = True
+        else:
+            augment = False
         if not augment:
             imgDataGen = ImageDataGenerator(preprocessing_function = preprocess_input, 
                                             rescale = rescale,
