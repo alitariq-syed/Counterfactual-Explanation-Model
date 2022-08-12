@@ -98,6 +98,7 @@ for loop in range(start_class, classes):
     elif args.model == 'efficientnet/':
         x =  base_model.output
     mean_fmap = GlobalAveragePooling2D()(x)
+    
 
 
     #modify base model (once it has been pre-trained separately) to be used with CF model later
@@ -192,10 +193,15 @@ for loop in range(start_class, classes):
         x =  base_model.output
     mean_fmap = GlobalAveragePooling2D()(x)
 
-    if args.counterfactual_PP:
-        x = Dense(num_filters,activation='sigmoid')(mean_fmap)#kernel_regularizer='l1' #,activity_regularizer='l1'
+    if args.dropout:
+        mean_fmap_dropout = tf.keras.layers.Dropout(0.5,seed = 111)(mean_fmap)
     else:
-        x = Dense(num_filters,activation='relu')(mean_fmap)
+        mean_fmap_dropout = mean_fmap
+        
+    if args.counterfactual_PP:
+        x = Dense(num_filters,activation='sigmoid')(mean_fmap_dropout)#kernel_regularizer='l1' #,activity_regularizer='l1'
+    else:
+        x = Dense(num_filters,activation='relu')(mean_fmap_dropout)
 
     #x = tf.keras.layers.Lambda(masking_layer)(x)
     #x = CustomLayer()(x)
@@ -224,7 +230,7 @@ for loop in range(start_class, classes):
         counterfactual_generator = tf.keras.Model(inputs=base_model.input, outputs= [PP_filter_matrix],name='counterfactual_model')
     else:
         counterfactual_generator = tf.keras.Model(inputs=base_model.input, outputs= [x],name='counterfactual_model')
-        counterfactual_generator.summary()
+    counterfactual_generator.summary()
 
     #counterfactual_generator = tf.keras.Model(inputs=model.input[0], outputs= x,name='counterfactual_model')
 

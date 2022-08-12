@@ -48,7 +48,7 @@ def model_accuracy_filters(model,gen, enabled_filters, args):
           if enabled_filters is None:
               default_fmatrix = tf.ones((len(x_batch_test), model.output[1].shape[3]))
           else:
-              default_fmatrix = np.ones((len(x_batch_test), model.output[1].shape[3]))
+              default_fmatrix = np.ones((len(x_batch_test), 512))#model.output[1].shape[3]))
               for i in range(len(x_batch_test)):
                   default_fmatrix[i,:] = enabled_filters
           

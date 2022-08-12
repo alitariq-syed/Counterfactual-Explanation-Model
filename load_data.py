@@ -199,7 +199,7 @@ if args.dataset != 'mnist':
         train_gen = imgDataGen.flow(x_train, y_train, batch_size = batch_size,shuffle= False)
         test_gen  = imgDataGen.flow(x_test, y_test, batch_size = batch_size,shuffle= False)
     elif args.dataset == 'CUB200' or args.dataset == 'BraTS'  or args.dataset == 'NIST':
-        if args.train and False:
+        if args.augmentation:
             augment = True
         else:
             augment = False

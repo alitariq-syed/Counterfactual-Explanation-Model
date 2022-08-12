@@ -36,6 +36,8 @@ from config import args, weights_path, KAGGLE, pretrained_weights_path
 from load_data import top_activation, num_classes, train_gen, label_map, test_gen, actual_test_gen
 from load_base_model import base_model
 
+from codes.model_accuracy_with_disabled_filters import model_accuracy_filters
+
 #%%
 np.random.seed(seed=100)
 
@@ -53,7 +55,7 @@ if not os.path.exists(weights_path):
 
 #%% create base model
 top_filters = base_model.output_shape[3] # flters in top conv layer (512 for VGG)
-fmatrix = tf.keras.layers.Input(shape=(top_filters),name='fmatrix')
+#fmatrix = tf.keras.layers.Input(shape=(top_filters),name='fmatrix')
 
 #set last conv layer as trainable to encourage MC filter activation/model debugging
 base_model.layers[-1].trainable = True
@@ -66,20 +68,25 @@ elif args.model == 'resnet50/':
 elif args.model == 'efficientnet/':
     x =  base_model.output
 mean_fmap = GlobalAveragePooling2D()(x)
+dropout = tf.keras.layers.Dropout(0.5,seed = 111)(mean_fmap)
+#%%
+x = tf.keras.layers.Activation('sigmoid')(mean_fmap)
+#x = Dense(512,activation='sigmoid')(mean_fmap)
+fmatrix = tf.keras.layers.ThresholdedReLU(theta=0.5)(x) #approx binary to make learnable
+#modified_fmap = mean_fmap*fmatrix
 
 #%%
-# x = tf.keras.layers.Activation('sigmoid')(mean_fmap)
-# fmatrix = tf.keras.layers.ThresholdedReLU(theta=0.5)(x) #approx binary to make learnable
-modified_fmap = mean_fmap*fmatrix
 
-#%%
-
-pre_softmax = Dense(num_classes,activation=None)(modified_fmap)
+pre_softmax = Dense(num_classes,activation=None)(dropout)
 out = tf.keras.layers.Activation(top_activation)(pre_softmax)
 
-model = tf.keras.Model(inputs=[base_model.input, fmatrix], outputs= [out, mean_fmap , modified_fmap, pre_softmax],name='base_model')
+model = tf.keras.Model(inputs=[base_model.input], outputs= [out, mean_fmap, fmatrix,pre_softmax,],name='base_model')
 
-
+#%%
+# model.compile(optimizer=optimizers.SGD(lr=0.001/10, momentum = 0.9), 
+#                   loss=['categorical_crossentropy'], 
+#                   metrics=['accuracy'])
+#%%
 model.summary()
 
 #load saved weights
@@ -87,7 +94,8 @@ if args.model =='myCNN/':
     model.load_weights(filepath=pretrained_weights_path+'/model_transfer_epoch_50.hdf5')
 else:
     if args.fine_tune:
-        model.load_weights(filepath=pretrained_weights_path+'/model_debugged.hdf5')
+        #model.load_weights(filepath=pretrained_weights_path+'/model_debugged.hdf5')
+        model.load_weights(filepath=weights_path+'/model_debugged.hdf5')
     else:
         model.load_weights(filepath=pretrained_weights_path+'/model_fine_tune_epoch_150.hdf5')
     # model.load_weights(filepath=pretrained_weights_path+'/model_debugged_epoch_9.hdf5')
@@ -140,22 +148,23 @@ def my_l1_loss_pre_Softmax(x,a):
 
 @tf.function 
 def train_step(images, labels, global_MC_filters):
-  with tf.GradientTape(persistent=True) as tape: #persistent=False  Boolean controlling whether a persistent gradient tape is created. False by default, which means at most one call can be made to the gradient() method on this object. 
+  with tf.GradientTape(persistent=False) as tape: #persistent=False  Boolean controlling whether a persistent gradient tape is created. False by default, which means at most one call can be made to the gradient() method on this object. 
+    
     # training=True is osnly needed if there are layers with different
     # behavior during training versus inference (e.g. Dropout).
        
-    predictions, mean_fmap, modified_fmap, pre_softmax = model([images,global_MC_filters], labels)   
+    predictions, mean_fmap, fmatrix, pre_softmax = model([images], training=True)   
 
     crossentropy_loss = loss_fn(labels, predictions)
     
     # mean_fmap_binary = tf.where(mean_fmap>0,1.0,0.0)
-    # x = tf.keras.layers.Activation('sigmoid')(mean_fmap)
+    #x = tf.keras.layers.Activation('sigmoid')(mean_fmap)
     #mean_fmap_binary = tf.keras.layers.ThresholdedReLU(theta=0.5)(mean_fmap) #approx binary to make learnable
     
     
     L1_weight=1
-    l1_loss_MC_filters = -L1_weight* my_l1_loss_MC(mean_fmap*global_MC_filters,0.0001/1)                     
-    l1_loss_non_MC_filters = L1_weight* my_l1_loss_nonMC(mean_fmap*(1-global_MC_filters),0.00001/1)   
+    l1_loss_MC_filters = -L1_weight* my_l1_loss_MC(fmatrix*global_MC_filters,0.0001*4)                     
+    l1_loss_non_MC_filters = L1_weight* my_l1_loss_nonMC(fmatrix*(1-global_MC_filters),0.00001*2)   
     
     # l1_loss_MC_filters = -L1_weight* my_l1_loss_pre_Softmax(tf.matmul(tf.transpose(mean_fmap*global_MC_filters),pre_softmax),0.001/1)                     
     # l1_loss_non_MC_filters = L1_weight* my_l1_loss_pre_Softmax(tf.matmul(tf.transpose(mean_fmap*(1-global_MC_filters)),pre_softmax),0.001/1)   
@@ -185,7 +194,7 @@ def train_step(images, labels, global_MC_filters):
     #F1 = -2 * (precision * recall) / (precision + recall+0.00000001)                  
     #%%
     
-    combined_loss = 1*crossentropy_loss #+ (l1_loss_non_MC_filters)*1
+    combined_loss = 1*crossentropy_loss + (l1_loss_MC_filters + l1_loss_non_MC_filters)# + l1_loss_non_MC_filters)*1
   
   gradients = tape.gradient(combined_loss, model.trainable_variables)
   optimizer.apply_gradients(zip(gradients, model.trainable_variables))
@@ -198,12 +207,12 @@ def train_step(images, labels, global_MC_filters):
 
   train_acc_metric(labels, predictions)
 
-#@tf.function
+@tf.function
 def test_step(images, labels):
   # training=False is only needed if there are layers with different
   # behavior during training versus inference (e.g. Dropout).
   default_fmatrix = tf.ones((len(images),512))
-  predictions, mean_fmap, modified_fmap, pre_softmax = model([images,default_fmatrix], training=False)
+  predictions, mean_fmap, fmatrix, pre_softmax = model([images],training = False)
 
   loss_value = loss_fn(labels, predictions)
 
@@ -234,7 +243,7 @@ for target_class in range(num_classes):
 
     #     plt.plot(pred_MC), plt.ylim([0, np.max(pred_MC)+1]),plt.xlabel("Filter number"),plt.ylabel("Filter activation magnitude"), plt.show()
  
-    freq_thresh = 0.15 #percent
+    freq_thresh = 0.0 #percent
     filter_histogram_cf_binary = tf.where(filter_histogram_cf>(freq_thresh*max(filter_histogram_cf)),1.0,0.0)
     filter_magnitude_cf_thresholded = (filter_magnitude_cf*filter_histogram_cf_binary)/max(filter_histogram_cf)
     global_MC_filters.append(filter_histogram_cf_binary)
@@ -249,7 +258,7 @@ test_gen.reset()
 test_gen.batch_index=0
 
 if args.train:
-    epochs = 100
+    epochs = 20
     batches=math.ceil(train_gen.n/train_gen.batch_size)
     test_batches=math.ceil(test_gen.n/test_gen.batch_size)
 
@@ -333,3 +342,5 @@ if args.test:
     print('\nTest loss:', test_loss.numpy())
     print('Test accuracy:', test_acc.numpy()) 
 #sys.exit()
+# enabled_filters = np.ones(512)
+# test_acc, test_loss, c_report = model_accuracy_filters(model,actual_test_gen, enabled_filters, args)
