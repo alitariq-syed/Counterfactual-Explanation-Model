@@ -29,7 +29,7 @@ from codes.model_accuracy_with_disabled_filters import model_accuracy_filters
 #%%
 
 if args.dataset == 'CUB200' or args.dataset == 'BraTS' or args.dataset == 'NIST': 
-    test_gen =train_gen #if args.find_global_filters else actual_test_gen# train_gen#actual_test_gen
+    test_gen =actual_test_gen #if args.find_global_filters else actual_test_gen# train_gen#actual_test_gen
     #test_gen_nopreprocess = train_gen_nopreprocess if args.find_global_filters else actual_test_gen_nopreprocess #train_gen_nopreprocess[0]#actual_test_gen_nopreprocess
     # print("using traingen gen data") if args.find_global_filters else print("using testgen gen data")
 
@@ -73,4 +73,5 @@ for i in range(200):
 class_recalls=np.asarray(class_recalls)    
 #np.save(file=save_folder+mName+"_global_disabled_accuracies_"+str(args.alter_class),arr=class_recalls)
 #print(c_report)
-# np.save(file="model_accuracies_debugged",arr=class_recalls)
+# np.save(file="model_accuracies_original",arr=class_recalls)
+# np.save(file="model_accuracies_debugged_7064",arr=class_recalls)

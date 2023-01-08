@@ -68,7 +68,8 @@ elif args.model == 'resnet50/':
 elif args.model == 'efficientnet/':
     x =  base_model.output
 mean_fmap = GlobalAveragePooling2D()(x)
-dropout = tf.keras.layers.Dropout(0.5,seed = 111)(mean_fmap)
+# dropout = tf.keras.layers.Dropout(0.5,seed = 111)(mean_fmap)
+dropout = tf.keras.layers.Dropout(0.5)(mean_fmap)
 #%%
 x = tf.keras.layers.Activation('sigmoid')(mean_fmap)
 #x = Dense(512,activation='sigmoid')(mean_fmap)
@@ -98,6 +99,8 @@ else:
         model.load_weights(filepath=weights_path+'/model_debugged.hdf5')
     else:
         model.load_weights(filepath=pretrained_weights_path+'/model_fine_tune_epoch_150.hdf5')
+        # model.load_weights(filepath=pretrained_weights_path+'/model_debugged_0.70240325_7042.hdf5')
+        
     # model.load_weights(filepath=pretrained_weights_path+'/model_debugged_epoch_9.hdf5')
 
 print("weights loaded")
@@ -163,7 +166,7 @@ def train_step(images, labels, global_MC_filters):
     
     
     L1_weight=1
-    l1_loss_MC_filters = -L1_weight* my_l1_loss_MC(fmatrix*global_MC_filters,0.0001*4)                     
+    l1_loss_MC_filters = -L1_weight* my_l1_loss_MC(fmatrix*global_MC_filters,0.0001*10)                     
     l1_loss_non_MC_filters = L1_weight* my_l1_loss_nonMC(fmatrix*(1-global_MC_filters),0.00001*2)   
     
     # l1_loss_MC_filters = -L1_weight* my_l1_loss_pre_Softmax(tf.matmul(tf.transpose(mean_fmap*global_MC_filters),pre_softmax),0.001/1)                     
@@ -257,6 +260,7 @@ train_gen.batch_index=0
 test_gen.reset()
 test_gen.batch_index=0
 
+best_val_accuracy = 0
 if args.train:
     epochs = 20
     batches=math.ceil(train_gen.n/train_gen.batch_size)
@@ -300,7 +304,7 @@ if args.train:
           
       #evaluate model at end of epoch
       evaluate=True
-      if evaluate and (epoch%2==0):
+      if evaluate and (epoch%1==0):
           #model.load_weights(weights_path)
           
           #for step,(x_batch_train, y_batch_train) in enumerate(dataset):
@@ -315,6 +319,12 @@ if args.train:
           test_loss = test_loss_metric.result()
           print('\nTest loss:', test_loss.numpy())
           print('Test accuracy:', test_acc.numpy())
+          
+          if test_acc.numpy()>best_val_accuracy:
+              best_val_accuracy = test_acc.numpy()
+              print("best_val_accuracy (saving model):", best_val_accuracy)
+              model.save_weights(filepath=weights_path+'/model_debugged_'+str(best_val_accuracy)+'.hdf5')
+
 
 
 if args.test:
@@ -341,6 +351,7 @@ if args.test:
         test_loss = test_loss_metric.result()
     print('\nTest loss:', test_loss.numpy())
     print('Test accuracy:', test_acc.numpy()) 
+    # model.save_weights(filepath=weights_path+'/model_debugged_'+str(test_acc.numpy())+'.hdf5')
 #sys.exit()
 # enabled_filters = np.ones(512)
 # test_acc, test_loss, c_report = model_accuracy_filters(model,actual_test_gen, enabled_filters, args)

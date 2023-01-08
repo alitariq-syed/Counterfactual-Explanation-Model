@@ -191,6 +191,7 @@ def train_counterfactual_net(model,weights_path,resume_path, generator, train_ge
     #########################
 
     alter_prediction,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax = model([img,fmatrix])
+    _alter_prediction,_fmaps,_mean_fmap,_modified_mean_fmap_activations,_pre_softmax = model([img,1-fmatrix])
     
     
     combined = tf.keras.Model(inputs=img, outputs=[alter_prediction,fmatrix,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax])#,PN_prediction])

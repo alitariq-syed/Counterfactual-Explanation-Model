@@ -52,8 +52,12 @@ else:
 if args.model =='myCNN/':
     model.load_weights(filepath=pretrained_weights_path+'/model_transfer_epoch_50.hdf5')
 else:
-    model.load_weights(filepath=pretrained_weights_path+'/model_fine_tune_epoch_150.hdf5')
-    #model.load_weights(filepath=pretrained_weights_path+'/model_debugged.hdf5')
+    # model.load_weights(filepath=pretrained_weights_path+'/model_fine_tune_epoch_150.hdf5')
+    model.load_weights(filepath=pretrained_weights_path+'/model_debugged_0.7033407_7064.hdf5')
+    # model.load_weights(filepath=pretrained_weights_path+'/model_debugged_0.7027442_7061.hdf5')
+    # model.load_weights(filepath=pretrained_weights_path+'/model_debugged_0.70240325_7042.hdf5')
+    # model.load_weights(filepath=pretrained_weights_path+'/model_retrained_normal.hdf5')
+    # model.load_weights(filepath=pretrained_weights_path+'/model_debugged.hdf5')
 print("base model weights loaded")
 
 #%% create CFE model
@@ -82,7 +86,10 @@ PP_filter_matrix = tf.keras.layers.ThresholdedReLU(theta=thresh)(x)
 counterfactual_generator = tf.keras.Model(inputs=base_model.input, outputs= [PP_filter_matrix],name='counterfactual_model')
 
 
-def load_cfe_model():
+def load_cfe_model(alter_class = None):
+    if alter_class is None:
+        alter_class = args.alter_class
+        
     if not args.train_singular_counterfactual_net:
         if args.choose_subclass:
             counterfactual_generator.load_weights(filepath=weights_path+'/counterfactual_generator_model_only_010.Red_winged_Blackbird_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
@@ -93,7 +100,8 @@ def load_cfe_model():
             else:
                 mode = 'PN_'
                 print("Loading CF model for PNs")
-            counterfactual_generator.load_weights(filepath=weights_path+'/'+mode+'counterfactual_generator_model_fixed_'+str(label_map[args.alter_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
+            counterfactual_generator.load_weights(filepath=weights_path+'/'+mode+'counterfactual_generator_model_fixed_'+str(label_map[alter_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
+            print("loaded MC CF model for class {s}".format(s=label_map[alter_class]))
         
     model.trainable = False
     img = tf.keras.Input(shape=model.input_shape[0][1:4])
