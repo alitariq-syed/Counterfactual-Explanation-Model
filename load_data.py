@@ -10,6 +10,7 @@ from tensorflow.keras.datasets import mnist, cifar10
 from tensorflow.keras.losses import categorical_crossentropy, binary_crossentropy
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
+import tensorflow as tf
 import numpy as np
 import sys
 
@@ -33,7 +34,15 @@ if args.dataset == 'mnist':
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
     x_train = np.expand_dims(x_train,-1)
     x_test = np.expand_dims(x_test,-1)
-    input_shape = (batch_size,28,28,1)
+    
+    x_train = np.repeat(x_train, 3, axis=-1)
+    x_test  = np.repeat(x_test, 3, axis=-1)
+
+
+    x_train = tf.image.resize(x_train, [32,32])
+    x_test = tf.image.resize(x_test, [32,32])
+
+    input_shape = (batch_size,32,32,1)
     label_map = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
     
     y_train = to_categorical(y_train, num_classes)
@@ -314,4 +323,5 @@ else:
         
         train_gen = imgDataGen.flow(x_train, y_train, batch_size = batch_size,shuffle= True)
         test_gen  = imgDataGen.flow(x_test, y_test, batch_size = batch_size,shuffle= False)
+        actual_test_gen = test_gen
     

@@ -35,15 +35,10 @@ from codes.train_counterfactual_net import train_counterfactual_net
 #%%
 
 from config import args, weights_path, KAGGLE, pretrained_weights_path
-from load_data import top_activation, num_classes, train_gen, test_gen
+from load_data import top_activation, num_classes, train_gen, test_gen,actual_test_gen
 from load_base_model import base_model
 
-from codes.model_accuracy_with_disabled_filters import model_accuracy_filters
-
-if args.dataset=='CUB200': 
-    from load_data import actual_test_gen
-else:
-    actual_test_gen = test_gen
+# from codes.model_accuracy_with_disabled_filters import model_accuracy_filters
 #%%
 np.random.seed(seed=100)
 
@@ -55,17 +50,13 @@ np.random.seed(seed=100)
 assert(args.find_global_filters==False)
 #make sure training generators are setup properly
 
-if not os.path.exists(weights_path):
-    os.makedirs(weights_path)
+if not os.path.exists(pretrained_weights_path):
+    os.makedirs(pretrained_weights_path)
 
 
 #%% create base model
-top_filters = base_model.output_shape[3] # flters in top conv layer (512 for VGG)
-fmatrix = tf.keras.layers.Input(shape=(top_filters),name='fmatrix')
 
-#set last conv layer as trainable to encourage MC filter activation/model debugging
-base_model.layers[-1].trainable = True
-# base_model.trainable = True
+base_model.trainable = True
 
 if args.model == 'VGG16/' or args.model == 'myCNN/':
     x =  MaxPool2D()(base_model.output)
@@ -75,10 +66,6 @@ elif args.model == 'efficientnet/':
     x =  base_model.output
 mean_fmap = GlobalAveragePooling2D()(x)
 dropout = tf.keras.layers.Dropout(0.5,seed = 111)(mean_fmap)
-#%%
-# x = tf.keras.layers.Activation('sigmoid')(mean_fmap)
-# fmatrix = tf.keras.layers.ThresholdedReLU(theta=0.5)(x) #approx binary to make learnable
-#modified_fmap = mean_fmap*fmatrix
 
 #%%
 
@@ -87,13 +74,17 @@ out = tf.keras.layers.Activation(top_activation)(pre_softmax)
 
 model = tf.keras.Model(inputs=[base_model.input], outputs= [out],name='base_model')
 
-model.compile(optimizer=optimizers.SGD(lr=0.001/10, momentum = 0.9), 
+if args.dataset == 'mnist':
+    optimizer = optimizers.Adam()
+else:
+    optimizer=optimizers.SGD(lr=0.001/10, momentum = 0.9)
+model.compile(optimizer=optimizer, 
                   loss=['categorical_crossentropy'], 
                   metrics=['accuracy'])
 
 model.summary()
 
-#load saved weights
+# #load saved weights
 if args.model =='myCNN/':
     model.load_weights(filepath=pretrained_weights_path+'/model_transfer_epoch_50.hdf5')
 else:
@@ -101,13 +92,14 @@ else:
         #model.load_weights(filepath=pretrained_weights_path+'/model_debugged.hdf5')
         model.load_weights(filepath=weights_path+'/model_retrained_normal.hdf5')
     else:
-        model.load_weights(filepath=pretrained_weights_path+'/model_fine_tune_epoch_150.hdf5')
+        # model.load_weights(filepath=pretrained_weights_path+'/model_fine_tune_epoch_150.hdf5')
+        model.load_weights(filepath=pretrained_weights_path+'/mnist_classifier_weights_epoch10.hdf5')
     # model.load_weights(filepath=pretrained_weights_path+'/model_debugged_epoch_9.hdf5')
 
 print("weights loaded")
 
 
-save_path = weights_path+'/model_retrained_normal.hdf5'
+save_path = pretrained_weights_path+'/model.hdf5'
 checkpoint = ModelCheckpoint(save_path, monitor='val_accuracy', verbose=1, save_best_only=False, mode='max', save_weights_only = True)
 callbacks_list = [checkpoint]
  
@@ -148,13 +140,12 @@ if args.test:
     #load best weights
 
     #model.load_weights(filepath=weights_path+'/model_retrained_normal.hdf5')
-    
     #model.evaluate(actual_test_gen,verbose=1)
          
     pred_probs= model.predict(actual_test_gen,verbose=1)
     
     pred_classes = np.argmax(pred_probs,1)
-    #actual_classes = np.argmax(test_gen.classes,1)
-    actual_classes = actual_test_gen.classes
+    actual_classes = np.argmax(test_gen.y,1)
+    # actual_classes = actual_test_gen.classes
     print(confusion_matrix(actual_classes,pred_classes))
     print(classification_report(actual_classes,pred_classes,digits=4)) 

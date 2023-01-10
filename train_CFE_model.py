@@ -58,12 +58,12 @@ logging = args.save_logFile # save file not required if code executed in jupyter
 
 if args.train_all_classes and KAGGLE:
     assert(args.choose_subclass==False)
-    print("train for ALL classes in loop on KAGGLE")
-    classes = num_classes -10
-    start_class=100
+    print("train for ALL classes")
+    classes = num_classes
+    start_class=0
 else:
     classes = 1
-    start_class= 0 #args2.alter_class
+    start_class= 0#args2.alter_class
     args.alter_class = args2.alter_class
 
 
@@ -122,7 +122,10 @@ for loop in range(start_class, classes):
     if args.model =='myCNN/':
         model.load_weights(filepath=pretrained_weights_path+'/model_transfer_epoch_50.hdf5')
     else:
-        model.load_weights(filepath=pretrained_weights_path+'/model_fine_tune_epoch_150.hdf5')
+        if args.dataset == 'mnist':
+            model.load_weights(filepath=pretrained_weights_path+'/mnist_classifier_weights_epoch10.hdf5')
+        else:
+            model.load_weights(filepath=pretrained_weights_path+'/model_fine_tune_epoch_150.hdf5')
 
     print("weights loaded")
 

@@ -25,6 +25,8 @@ else:
     sys.exit()    
 
 #%%
+if args.dataset == 'mnist':
+    assert(args.imagenet_weights==False)
 if args.imagenet_weights:
     print('loading VGG model')
     if args.dataset == 'cxr1000' and False:
@@ -141,7 +143,11 @@ if args.imagenet_weights:
                 layer.trainable = False
         base_model = tf.keras.Model(vgg.input,vgg.layers[-2].output)
 else:
-    base_model = VGG16(weights=None,include_top = False)
+    if args.dataset == 'mnist':
+        vgg = VGG16(weights=None,include_top = False,input_shape=(32,32,3))
+        base_model = tf.keras.Model(vgg.input,vgg.layers[-2].output)
+    else:
+        assert(False)
     #base_model = MyFunctionalModel()
 
 

@@ -32,17 +32,16 @@ from codes.find_agreement_global_MC import find_agreement_global_MC
 
 #%%
 from config import args, weights_path, KAGGLE, pretrained_weights_path
-from load_data import top_activation, num_classes, train_gen, label_map, actual_test_gen
+from load_data import top_activation, num_classes, train_gen, label_map,actual_test_gen
 from load_base_model import base_model
 from load_CFE_model import model, load_cfe_model,fmatrix
+
 #%%
 np.random.seed(seed=100)
-
-
     
 assert(args.find_global_filters==False) #to make sure data generators are setup properly
 assert(args.counterfactual_PP)
-assert(args.train_all_classes)
+# assert(args.train_all_classes)# why needed? cannot remember
 
 #%%
 W = model.weights[-2]
@@ -68,8 +67,8 @@ print ('class for analysis: ', label_map[class_for_analysis])
 weights_alter_class = W[:,args.analysis_class]
 plt.plot(weights_alter_class),plt.title("weight alter class "+str(args.analysis_class)),plt.show()
 
-if args.dataset == 'CUB200' or args.dataset == 'BraTS' or args.dataset == 'NIST': 
-    test_gen =train_gen if args.find_global_filters else actual_test_gen# train_gen#actual_test_gen
+# if args.dataset == 'CUB200' or args.dataset == 'BraTS' or args.dataset == 'NIST': 
+test_gen =train_gen if args.find_global_filters else actual_test_gen# train_gen#actual_test_gen
     #test_gen_nopreprocess = train_gen_nopreprocess if args.find_global_filters else actual_test_gen_nopreprocess #train_gen_nopreprocess[0]#actual_test_gen_nopreprocess
     # print("using traingen gen data") if args.find_global_filters else print("using testgen gen data")
 
