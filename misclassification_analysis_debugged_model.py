@@ -43,7 +43,7 @@ np.random.seed(seed=100)
     
 assert(args.find_global_filters==False) #to make sure data generators are setup properly
 assert(args.counterfactual_PP)
-assert(args.train_all_classes)
+assert(args.train_all_classes) # to make sure CFE model is loaded from correct path
 
 #%%
 W = model.weights[-2]
@@ -103,50 +103,52 @@ def get_cfe_MC_prediction(alter_class):
     return alter_probs,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,alter_pre_softmax
     
     
-def get_original_predictions():
+def get_original_predictions(show_fig):
     model.load_weights(filepath=pretrained_weights_path+'/model_fine_tune_epoch_150.hdf5')
     pred_probs,fmaps,mean_fmaps,_ ,pre_softmax= model([np.expand_dims(x_batch_test[img_ind],0),np.expand_dims(default_fmatrix[0],0)], training=False)#with eager
-    #pred_probs,fmaps_x1,fmaps_x2,target_1,target_2,raw_map,forward_1 = model(np.expand_dims(x_batch_test[img_ind],0),y_batch_test[img_ind])#with eager
-    print('\noriginal predicted: ',label_map[np.argmax(pred_probs)], ' with prob: ',np.max(pred_probs)*100,'%')
-    print ('actual: ', label_map[np.argmax(y_gt)], ' with prob: ',pred_probs[0][np.argmax(y_gt)].numpy()*100,'%')
-    #print('pre_softmax: ',pre_softmax[0][0:10])
     
-    image_nopreprocessed = restore_original_image_from_array(x_batch_test[img_ind].squeeze())
-    output_orig,_ = explainer.explain((np.expand_dims(x_batch_test[img_ind],0),None),model,np.argmax(pred_probs),image_nopreprocessed=np.expand_dims(image_nopreprocessed,0),fmatrix=default_fmatrix,image_weight=0.7, RF=False, heatmap_cutout = False)
-    plt.imshow(output_orig), plt.axis('off'), plt.title('original predicted')
-    plt.show()
-    output_orig2,_ = explainer.explain((np.expand_dims(x_batch_test[img_ind],0),None),model,np.argmax(pred_probs),image_nopreprocessed=np.expand_dims(image_nopreprocessed,0),fmatrix=default_fmatrix,image_weight=0.7, RF=True, heatmap_cutout = False)
-    plt.imshow(output_orig2), plt.axis('off'), plt.title('original predicted')
-    plt.show()
+    output_orig2=[]
+    if show_fig:
+        print('\noriginal predicted: ',label_map[np.argmax(pred_probs)], ' with prob: ',np.max(pred_probs)*100,'%')
+        print ('actual: ', label_map[np.argmax(y_gt)], ' with prob: ',pred_probs[0][np.argmax(y_gt)].numpy()*100,'%')
+
+        image_nopreprocessed = restore_original_image_from_array(x_batch_test[img_ind].squeeze())
+        output_orig,_ = explainer.explain((np.expand_dims(x_batch_test[img_ind],0),None),model,np.argmax(pred_probs),image_nopreprocessed=np.expand_dims(image_nopreprocessed,0),fmatrix=default_fmatrix,image_weight=0.7, RF=False, heatmap_cutout = False)
+        plt.imshow(output_orig), plt.axis('off'), plt.title('original predicted')
+        plt.show()
+        output_orig2,_ = explainer.explain((np.expand_dims(x_batch_test[img_ind],0),None),model,np.argmax(pred_probs),image_nopreprocessed=np.expand_dims(image_nopreprocessed,0),fmatrix=default_fmatrix,image_weight=0.7, RF=True, heatmap_cutout = False)
+        plt.imshow(output_orig2), plt.axis('off'), plt.title('original predicted')
+        plt.show()
         
     #cf MC prediction
     #Todo: cannot use CFE model for debugging analysis because all weights saved for CFE model are based on original base model. no the improved model. 
     #So I think it is best to use gradCAMs to show variation in model attention in improved models.
-    alter_class=np.argmax(pred_probs)
-    alter_probs,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,_ = get_cfe_MC_prediction(alter_class)
+        # alter_class=np.argmax(pred_probs)
+        # alter_probs,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,_ = get_cfe_MC_prediction(alter_class)
     
     return pred_probs, output_orig2
 
-def get_debugged_predictions():
+def get_debugged_predictions(show_fig):
     model.load_weights(filepath=pretrained_weights_path+'/model_debugged_0.7033407_7064.hdf5')
     pred_probs,fmaps,mean_fmaps,_ ,pre_softmax= model([np.expand_dims(x_batch_test[img_ind],0),np.expand_dims(default_fmatrix[0],0)], training=False)#with eager
-    #pred_probs,fmaps_x1,fmaps_x2,target_1,target_2,raw_map,forward_1 = model(np.expand_dims(x_batch_test[img_ind],0),y_batch_test[img_ind])#with eager
-    print('\ndebugged predicted: ',label_map[np.argmax(pred_probs)], ' with prob: ',np.max(pred_probs)*100,'%')
-    print ('actual: ', label_map[np.argmax(y_gt)], ' with prob: ',pred_probs[0][np.argmax(y_gt)].numpy()*100,'%')
-    #print('pre_softmax: ',pre_softmax[0][0:10])
     
-    image_nopreprocessed = restore_original_image_from_array(x_batch_test[img_ind].squeeze())
-    output_debugged,_ = explainer.explain((np.expand_dims(x_batch_test[img_ind],0),None),model,np.argmax(pred_probs),image_nopreprocessed=np.expand_dims(image_nopreprocessed,0),fmatrix=default_fmatrix,image_weight=0.7, RF=False, heatmap_cutout = False)
-    plt.imshow(output_debugged), plt.axis('off'), plt.title('debugged predicted')
-    plt.show()
-    output_debugged2,_ = explainer.explain((np.expand_dims(x_batch_test[img_ind],0),None),model,np.argmax(pred_probs),image_nopreprocessed=np.expand_dims(image_nopreprocessed,0),fmatrix=default_fmatrix,image_weight=0.7, RF=True, heatmap_cutout = False)
-    plt.imshow(output_debugged2), plt.axis('off'), plt.title('debugged predicted')
-    plt.show()
+    output_debugged2=[]
+    if show_fig:
+        print('\ndebugged predicted: ',label_map[np.argmax(pred_probs)], ' with prob: ',np.max(pred_probs)*100,'%')
+        print ('actual: ', label_map[np.argmax(y_gt)], ' with prob: ',pred_probs[0][np.argmax(y_gt)].numpy()*100,'%')
+
+        image_nopreprocessed = restore_original_image_from_array(x_batch_test[img_ind].squeeze())
+        output_debugged,_ = explainer.explain((np.expand_dims(x_batch_test[img_ind],0),None),model,np.argmax(pred_probs),image_nopreprocessed=np.expand_dims(image_nopreprocessed,0),fmatrix=default_fmatrix,image_weight=0.7, RF=False, heatmap_cutout = False)
+        plt.imshow(output_debugged), plt.axis('off'), plt.title('debugged predicted')
+        plt.show()
+        output_debugged2,_ = explainer.explain((np.expand_dims(x_batch_test[img_ind],0),None),model,np.argmax(pred_probs),image_nopreprocessed=np.expand_dims(image_nopreprocessed,0),fmatrix=default_fmatrix,image_weight=0.7, RF=True, heatmap_cutout = False)
+        plt.imshow(output_debugged2), plt.axis('off'), plt.title('debugged predicted')
+        plt.show()
     #cf MC prediction
     #Todo: cannot use CFE model for debugging analysis because all weights saved for CFE model are based on original base model. no the improved model. 
     #So I think it is best to use gradCAMs to show variation in model attention in improved models.
-    alter_class=np.argmax(pred_probs)
-    alter_probs,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,_ = get_cfe_MC_prediction(alter_class)
+        # alter_class=np.argmax(pred_probs)
+        # alter_probs,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,_ = get_cfe_MC_prediction(alter_class)
     
 
     return pred_probs, output_debugged2           
@@ -159,9 +161,10 @@ alter_class_starting_batch = np.floor(np.where(gen.labels==args.analysis_class)[
 index_reached=0
 loaded_cfe_model=-1
 start = time.time()
+skip = False# to skip to chosen class images
 for k in range(batches):
 
-    if k < alter_class_starting_batch:
+    if k < alter_class_starting_batch and skip:
         sys.stdout.write("\rskipping batch %i of %i" % (k, batches))
         continue
     else:
@@ -173,7 +176,7 @@ for k in range(batches):
     
     default_fmatrix = tf.ones((len(x_batch_test),base_model.output.shape[3]))
 
-    if gen.batch_index < alter_class_starting_batch and gen.batch_index >0:
+    if gen.batch_index < alter_class_starting_batch and gen.batch_index >0 and skip:
         continue
 
     
@@ -193,7 +196,7 @@ for k in range(batches):
         y_gt = y_batch_test[img_ind]
         
          #skip other class        
-        if class_for_analysis==np.argmax(y_gt):
+        if class_for_analysis==np.argmax(y_gt) or not skip:
             pass
             # print('\n\nimg_ind:',actual_img_ind)
         else:
@@ -201,9 +204,9 @@ for k in range(batches):
         
         print("\n------------------------------------------")
         #original model
-        pred_probs_original,output_orig = get_original_predictions()
+        pred_probs_original,output_orig = get_original_predictions(show_fig = False)
         #debugged model
-        pred_probs_debugged,output_debugged = get_debugged_predictions()
+        pred_probs_debugged,output_debugged = get_debugged_predictions(show_fig = False)
         
         case = ""
         if np.argmax(pred_probs_original) != np.argmax(y_gt) and np.argmax(pred_probs_debugged) == np.argmax(y_gt): 
@@ -213,7 +216,7 @@ for k in range(batches):
             case = "New Misclassification"
             print("\n",case)
         if np.argmax(pred_probs_original) == np.argmax(y_gt) and np.argmax(pred_probs_debugged) == np.argmax(y_gt): 
-            if np.max(pred_probs_debugged)> np.max(pred_probs_original):
+            if np.max(pred_probs_debugged)> np.max(pred_probs_original) and (np.max(pred_probs_debugged)-np.max(pred_probs_original))>0.3:
                 case = "Confidence improved"
                 print("\n",case)
         if np.argmax(pred_probs_original) != np.argmax(y_gt) and np.argmax(pred_probs_debugged) != np.argmax(y_gt): 
@@ -226,15 +229,28 @@ for k in range(batches):
             if pred_probs_original[0][np.argmax(y_gt)]>0.9:
                 print("skipping high confidence prediction")
                 continue
-        
+        skip_low_confidence_debugged = False
+        if skip_low_confidence_debugged:
+            if pred_probs_debugged[0][np.argmax(y_gt)]<0.95:
+                print("skipping low confidence prediction")
+                continue
+
+
         save_fig=False
-        if case!='':
-            save_fig = int(input("save fig?"))
-            if save_fig:
+        # if case!='':
+        if case=='Confidence improved':
+            pred_probs_original,output_orig = get_original_predictions(show_fig = True)
+            #debugged model
+            pred_probs_debugged,output_debugged = get_debugged_predictions(show_fig = True)
+
+            # save_fig = int(input("save fig?"))
+            if save_fig or True:
                 mName = args.model[:-1]+'_'+args.dataset
                 
-                plt.imshow(output_orig), plt.axis('off'), plt.title(''),plt.savefig(fname="./model_debugging_work/figures/"+case+'/'+mName+"_orig_GradCAM_"+str(np.argmax(pred_probs_original))+"_"+str(np.max(pred_probs_original))+"_"+str(actual_img_ind)+".png", dpi=300, bbox_inches = 'tight'), plt.show()
-                plt.imshow(output_debugged), plt.axis('off'), plt.title(''),plt.savefig(fname="./model_debugging_work/figures/"+case+'/'+mName+"_debuggedGradCAM_alter_"+str(np.argmax(pred_probs_debugged))+"_"+str(np.max(pred_probs_debugged))+"_"+str(actual_img_ind)+".png", dpi=300, bbox_inches = 'tight'), plt.show()
+                # plt.imshow(output_orig), plt.axis('off'), plt.title(''),plt.savefig(fname="./model_debugging_work/figures/"+case+'/'+mName+"_orig_GradCAM_"+str(np.argmax(pred_probs_original))+"_"+str(np.max(pred_probs_original))+"_"+str(actual_img_ind)+".png", dpi=300, bbox_inches = 'tight'), plt.show()
+                # plt.imshow(output_debugged), plt.axis('off'), plt.title(''),plt.savefig(fname="./model_debugging_work/figures/"+case+'/'+mName+"_debuggedGradCAM_alter_"+str(np.argmax(pred_probs_debugged))+"_"+str(np.max(pred_probs_debugged))+"_"+str(actual_img_ind)+".png", dpi=300, bbox_inches = 'tight'), plt.show()
+                plt.imshow(output_orig), plt.axis('off'), plt.title(''),plt.savefig(fname="./model_debugging_work/figures/"+case+'/'+mName+"_"+str(actual_img_ind)+"_orig_GradCAM_"+str(np.argmax(pred_probs_original))+"_"+str(np.max(pred_probs_original))+".png", dpi=300, bbox_inches = 'tight'), plt.show()
+                plt.imshow(output_debugged), plt.axis('off'), plt.title(''),plt.savefig(fname="./model_debugging_work/figures/"+case+'/'+mName+"_"+str(actual_img_ind)+"_debuggedGradCAM_alter_"+str(np.argmax(pred_probs_debugged))+"_"+str(np.max(pred_probs_debugged))+".png", dpi=300, bbox_inches = 'tight'), plt.show()
 
 
         # continue

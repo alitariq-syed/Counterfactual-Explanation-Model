@@ -12,7 +12,7 @@ from tensorflow.keras.layers import Dense, Conv2D, MaxPool2D, Flatten,Softmax, G
 from config import args
 #%%
 
-if args.model == 'VGG16/' or args.model =='myCNN/':
+if args.model == 'VGG16/':
     from tensorflow.keras.applications.vgg16 import VGG16,decode_predictions, preprocess_input
 elif args.model == 'resnet50/':
     from tensorflow.keras.applications.resnet50 import ResNet50, decode_predictions, preprocess_input
@@ -20,6 +20,10 @@ elif args.model == 'efficientnet/':
     from tensorflow.keras.applications.efficientnet import EfficientNetB0, decode_predictions, preprocess_input
 elif args.model == 'inceptionv3/':
     from tensorflow.keras.applications.inception_v3 import InceptionV3, decode_predictions, preprocess_input
+elif args.model =='customCNN/':
+    from customCNN import classifier
+    # assert(False)
+
 else:
     print("incorrect model specified")
     sys.exit()    
@@ -144,8 +148,8 @@ if args.imagenet_weights:
         base_model = tf.keras.Model(vgg.input,vgg.layers[-2].output)
 else:
     if args.dataset == 'mnist':
-        vgg = VGG16(weights=None,include_top = False,input_shape=(32,32,3))
-        base_model = tf.keras.Model(vgg.input,vgg.layers[-2].output)
+        base_model = tf.keras.Model(classifier.input,classifier.layers[-5].output)
+        preprocess_input = None
     else:
         assert(False)
     #base_model = MyFunctionalModel()

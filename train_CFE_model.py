@@ -91,8 +91,8 @@ for loop in range(start_class, classes):
     fmatrix = tf.keras.layers.Input(shape=(top_filters),name='fmatrix')
     #flag = tf.keras.layers.Input(shape=(1))
 
-    if args.model == 'VGG16/' or args.model == 'myCNN/':
-        x =  MaxPool2D()(base_model.output)
+    if args.model == 'VGG16/' or args.model == 'customCNN/':
+        x =  MaxPool2D(name='maxpool2')(base_model.output)
     elif args.model == 'resnet50/':
         x =  base_model.output
     elif args.model == 'efficientnet/':
@@ -119,8 +119,8 @@ for loop in range(start_class, classes):
     model.summary()
 
     #load saved weights
-    if args.model =='myCNN/':
-        model.load_weights(filepath=pretrained_weights_path+'/model_transfer_epoch_50.hdf5')
+    if args.model =='customCNN/':
+        model.load_weights(filepath=pretrained_weights_path+'/mnist_classifier_weights_GAP_epoch30.hdf5')
     else:
         if args.dataset == 'mnist':
             model.load_weights(filepath=pretrained_weights_path+'/mnist_classifier_weights_epoch10.hdf5')
@@ -188,8 +188,8 @@ for loop in range(start_class, classes):
     num_filters = model.output[1].shape[3]
     model.trainable = False
 
-    if args.model == 'VGG16/' or args.model == 'myCNN/':
-        x =  MaxPool2D()(base_model.output)
+    if args.model == 'VGG16/' or args.model == 'customCNN/':
+        x =  MaxPool2D(name='maxpool2')(base_model.output)
     elif args.model == 'resnet50/':
         x =  base_model.output
     elif args.model == 'efficientnet/':
@@ -217,10 +217,10 @@ for loop in range(start_class, classes):
     thresh=0.5
     PP_filter_matrix = tf.keras.layers.ThresholdedReLU(theta=thresh)(x)
 
-    if not args.counterfactual_PP: #for PNs
+    # if not args.counterfactual_PP: #for PNs
 
-        PN_layer = PN_add_layer(PP_filter_matrix.shape[1],input_dim=PP_filter_matrix.shape[1])(PP_filter_matrix)
-        PN_layer = tf.keras.layers.ReLU()(PN_layer)
+    #     PN_layer = PN_add_layer(PP_filter_matrix.shape[1],input_dim=PP_filter_matrix.shape[1])(PP_filter_matrix)
+    #     PN_layer = tf.keras.layers.ReLU()(PN_layer)
         
         
         #PN_layer = Dense(num_filters,activation='relu')(PP_filter_matrix)

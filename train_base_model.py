@@ -58,7 +58,7 @@ if not os.path.exists(pretrained_weights_path):
 
 base_model.trainable = True
 
-if args.model == 'VGG16/' or args.model == 'myCNN/':
+if args.model == 'VGG16/' or args.model == 'customCNN/':
     x =  MaxPool2D()(base_model.output)
 elif args.model == 'resnet50/':
     x =  base_model.output
@@ -85,8 +85,8 @@ model.compile(optimizer=optimizer,
 model.summary()
 
 # #load saved weights
-if args.model =='myCNN/':
-    model.load_weights(filepath=pretrained_weights_path+'/model_transfer_epoch_50.hdf5')
+if args.model =='customCNN/':
+    model.load_weights(filepath=pretrained_weights_path+'/mnist_classifier_weights_GAP_epoch30.hdf5')
 else:
     if args.fine_tune:
         #model.load_weights(filepath=pretrained_weights_path+'/model_debugged.hdf5')

@@ -35,14 +35,15 @@ if args.dataset == 'mnist':
     x_train = np.expand_dims(x_train,-1)
     x_test = np.expand_dims(x_test,-1)
     
-    x_train = np.repeat(x_train, 3, axis=-1)
-    x_test  = np.repeat(x_test, 3, axis=-1)
+    #to make it rgb image by repeating first gray channel
+    # x_train = np.repeat(x_train, 3, axis=-1)
+    # x_test  = np.repeat(x_test, 3, axis=-1)
 
+    #resize the whole dataset
+    # x_train = tf.image.resize(x_train, [32,32])
+    # x_test = tf.image.resize(x_test, [32,32])
 
-    x_train = tf.image.resize(x_train, [32,32])
-    x_test = tf.image.resize(x_test, [32,32])
-
-    input_shape = (batch_size,32,32,1)
+    input_shape = (batch_size,28,28,1)
     label_map = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
     
     y_train = to_categorical(y_train, num_classes)

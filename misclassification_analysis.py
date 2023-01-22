@@ -85,8 +85,12 @@ filter_sum = 0
 gen.reset() #resets batch index to 0
 local_misclassifications = 0
 img_count=0
-alter_class_images_count = np.sum(gen.classes==args.analysis_class)
-alter_class_starting_batch = np.floor(np.where(gen.labels==args.analysis_class)[0][0]/gen.batch_size).astype(np.int32)
+if args.dataset=='mnist':
+    alter_class_images_count = np.sum(np.argmax(gen.y,1)==args.analysis_class)
+    alter_class_starting_batch = np.floor(np.where(np.argmax(gen.y,1)==args.analysis_class)[0][0]/gen.batch_size).astype(np.int32)
+else:
+    alter_class_images_count = np.sum(gen.classes==args.analysis_class)
+    alter_class_starting_batch = np.floor(np.where(gen.labels==args.analysis_class)[0][0]/gen.batch_size).astype(np.int32)
 index_reached=0
 loaded_cfe_model=-1
 start = time.time()
@@ -160,7 +164,7 @@ for k in range(batches):
 
             
        # #skip high confidence predictions
-        skip_high_confidence = True
+        skip_high_confidence = False
         if skip_high_confidence:
             if pred_probs[0][np.argmax(y_gt)]>0.9:
                 print("skipping high confidence prediction")
@@ -178,7 +182,7 @@ for k in range(batches):
             loaded_cfe_model=inferred_class
         
         #%%            
-        skip_low_confidence_alter = True
+        skip_low_confidence_alter = False
         if skip_low_confidence_alter:
             alter_prediction,fmatrix,fmaps, mean_fmap, modified_mean_fmap_activations,alter_pre_softmax = combined(np.expand_dims(x_batch_test[img_ind],0))                
             if alter_prediction[0][alter_class]<0.9:
@@ -196,7 +200,10 @@ for k in range(batches):
        
             
         gradcam = True
-        image_nopreprocessed = restore_original_image_from_array(x_batch_test[img_ind].squeeze())
+        if args.dataset != 'mnist':
+            image_nopreprocessed = restore_original_image_from_array(x_batch_test[img_ind].squeeze())
+        else:
+            image_nopreprocessed = x_batch_test[img_ind]
         if gradcam:
             output_orig,_ = explainer.explain((np.expand_dims(x_batch_test[img_ind],0),None),model,np.argmax(pred_probs),image_nopreprocessed=np.expand_dims(image_nopreprocessed,0),fmatrix=default_fmatrix)
             
@@ -277,7 +284,7 @@ for k in range(batches):
             
             plt.imshow(output_cf), plt.axis('off'), plt.title('thresh prediction')
             plt.show()
-            plt.imshow(restore_original_image_from_array(x_batch_test[img_ind].squeeze())), plt.axis('off'), plt.title('original image')
+            plt.imshow(image_nopreprocessed), plt.axis('off'), plt.title('original image')
             plt.show()
        
         
@@ -308,7 +315,7 @@ for k in range(batches):
 
         #%% model debugging misclassification analysis
         #compare MC filters of inferred class with the global MC filters of inferred and top-3 classes to find agreement with the inferred class or other classes
-        if True:
+        if args.dataset=='CUB200':
             inferred_class = np.argmax(pred_probs)
             
             selected_probs = pred_probs # alter_probs #pred_probs
@@ -345,6 +352,7 @@ for k in range(batches):
             print('top_3_candidate_classes', top_3_candidate_classes)
             print("np.argmax(scores) ", np.argmax(scores))
             print(top_3_candidate_classes[np.argmax(scores)])
-            continue
+        print("")
+        continue
 end = time.time()
 print("time taken: ",end - start)
