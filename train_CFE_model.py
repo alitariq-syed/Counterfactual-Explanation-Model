@@ -40,7 +40,7 @@ if KAGGLE:
 
 import argparse
 parser = argparse.ArgumentParser(description='Interpretable CNN')
-parser.add_argument('--alter_class', default = 9, type = np.int32)
+parser.add_argument('--alter_class', default = 0, type = np.int32)
 args2 = parser.parse_args()
 
 if (args.train_singular_counterfactual_net and args.choose_subclass):
@@ -120,7 +120,11 @@ for loop in range(start_class, classes):
 
     #load saved weights
     if args.model =='customCNN/':
-        model.load_weights(filepath=pretrained_weights_path+'/mnist_classifier_weights_GAP_epoch30.hdf5')
+        if args.dataset == 'mnist':
+            model.load_weights(filepath=pretrained_weights_path+'/mnist_classifier_weights_GAP_epoch30.hdf5')
+        elif args.dataset == 'fmnist':
+            model.load_weights(filepath=pretrained_weights_path+'/fmnist_classifier_weights_GAP_epoch30_128_filters.hdf5')
+
     else:
         if args.dataset == 'mnist':
             model.load_weights(filepath=pretrained_weights_path+'/mnist_classifier_weights_epoch10.hdf5')

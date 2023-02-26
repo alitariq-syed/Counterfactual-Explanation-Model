@@ -11,18 +11,18 @@ from tensorflow import keras
 # Convolutional Encoder
 input_img = keras.Input(shape=(28,28,1))
 x = Conv2D(64,(3,3),padding="same", activation="relu")(input_img)
-x = Conv2D(64,(3,3),padding="same", activation="relu")(x)
+# x = Conv2D(64,(3,3),padding="same", activation="relu")(x)
+x = MaxPool2D((2,2))(x)
+x = Conv2D(64, (3,3), padding="same", activation="relu")(x)
+# x = Conv2D(128, (3,3), padding="same", activation="relu")(x)
+x = MaxPool2D((2,2))(x)
+x = Conv2D(64, (3,3), padding="same", activation="relu")(x)
+# x = Conv2D(256, (3,3), padding="same", activation="relu")(x)
+# x = Conv2D(256, (3,3), padding="same", activation="relu")(x)
 x = MaxPool2D((2,2))(x)
 x = Conv2D(128, (3,3), padding="same", activation="relu")(x)
-x = Conv2D(128, (3,3), padding="same", activation="relu")(x)
-x = MaxPool2D((2,2))(x)
-x = Conv2D(256, (3,3), padding="same", activation="relu")(x)
-x = Conv2D(256, (3,3), padding="same", activation="relu")(x)
-x = Conv2D(256, (3,3), padding="same", activation="relu")(x)
-x = MaxPool2D((2,2))(x)
-x = Conv2D(512, (3,3), padding="same", activation="relu")(x)
-x = Conv2D(512, (3,3), padding="same", activation="relu")(x)
-x = Conv2D(512, (3,3), padding="same", activation="relu")(x)
+# x = Conv2D(512, (3,3), padding="same", activation="relu")(x)
+# x = Conv2D(512, (3,3), padding="same", activation="relu")(x)
 
 
 encoded = MaxPool2D((2,2),name='maxpool')(x)
@@ -33,3 +33,25 @@ dropout    = Dropout(0.5)(mean_fmap)
 out        = Dense(10,activation='softmax', name='classification')(dropout)
 
 classifier = keras.Model(inputs = input_img, outputs = out, name='Classifier')
+
+# classifier.trainable = True
+
+#%% decoder
+# x = Dense(1 *1 * 64, activation="relu")(classifier.layers[-3].output)
+x = Reshape((1, 1, 128))(classifier.layers[-3].output)
+
+x = Conv2D(64, (3, 3), activation = 'relu', padding = 'same')(x)
+x = UpSampling2D((2, 2))(x)
+x = Conv2D(64, (3, 3), activation = 'relu', padding = 'same')(x)
+x = UpSampling2D((2, 2))(x)
+x = Conv2D(64, (3, 3), activation = 'relu', padding = 'same')(x)
+x = UpSampling2D((2, 2))(x)
+x = Conv2D(64, (3, 3), activation = 'relu', padding = 'same')(x)
+x = UpSampling2D((2, 2))(x)
+x = Conv2D(64, (3, 3), activation = 'relu', padding = 'valid')(x)
+x = UpSampling2D((2, 2))(x) 
+decoded = Conv2D(1, (3, 3), activation = 'relu' , padding = 'same', name='autoencoder')(x)
+
+autoencoder   = keras.Model(inputs = input_img, outputs = [out, decoded])
+
+

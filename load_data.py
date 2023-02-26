@@ -6,7 +6,7 @@ Created on Wed Jul  6 23:30:06 2022
 """
 #%%
 
-from tensorflow.keras.datasets import mnist, cifar10
+from tensorflow.keras.datasets import mnist, cifar10, fashion_mnist
 from tensorflow.keras.losses import categorical_crossentropy, binary_crossentropy
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -20,7 +20,7 @@ from load_base_model import preprocess_input
 from codes.load_cxr_dataset import create_cxr_dataframes, load_cxr_dataset
 
 #%%
-if args.dataset =='mnist':
+if args.dataset =='mnist' or args.dataset =='fmnist':
     batch_size = 32
 else:
     batch_size =16 # 16 for analysis, 32 for training
@@ -32,6 +32,25 @@ print("batch_size: ",batch_size)
 if args.dataset == 'mnist':
     num_classes=10
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
+    x_train = np.expand_dims(x_train,-1)
+    x_test = np.expand_dims(x_test,-1)
+    
+    #to make it rgb image by repeating first gray channel
+    # x_train = np.repeat(x_train, 3, axis=-1)
+    # x_test  = np.repeat(x_test, 3, axis=-1)
+
+    #resize the whole dataset
+    # x_train = tf.image.resize(x_train, [32,32])
+    # x_test = tf.image.resize(x_test, [32,32])
+
+    input_shape = (batch_size,28,28,1)
+    label_map = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+    
+    y_train = to_categorical(y_train, num_classes)
+    y_test = to_categorical(y_test, num_classes)
+elif args.dataset == 'fmnist':
+    num_classes=10
+    (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
     x_train = np.expand_dims(x_train,-1)
     x_test = np.expand_dims(x_test,-1)
     
@@ -193,7 +212,7 @@ else:
 
 
 #%%
-if args.dataset != 'mnist':
+if args.dataset not in ['fmnist', 'mnist']:
     if args.imagenet_weights:
         print('using imagenet_weights')
         rescale = 1./1

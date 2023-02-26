@@ -29,7 +29,7 @@ else:
     sys.exit()    
 
 #%%
-if args.dataset == 'mnist':
+if args.dataset == 'mnist' or args.dataset == 'fmnist':
     assert(args.imagenet_weights==False)
 if args.imagenet_weights:
     print('loading VGG model')
@@ -147,7 +147,7 @@ if args.imagenet_weights:
                 layer.trainable = False
         base_model = tf.keras.Model(vgg.input,vgg.layers[-2].output)
 else:
-    if args.dataset == 'mnist':
+    if args.dataset == 'mnist' or args.dataset == 'fmnist':
         base_model = tf.keras.Model(classifier.input,classifier.layers[-5].output)
         preprocess_input = None
     else:

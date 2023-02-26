@@ -45,7 +45,7 @@ parser.add_argument('--analysis_class', default = 6, type = np.int32) # class fo
 parser.add_argument('--find_global_filters', default = False, type=str2bool) # perform statistical analysis to find the activation magnitude of all filters for the alter class and train images of alter class
 #parser.add_argument('--alter_class_2', default = 0, type = np.int32) # alter class for 2nd example, 9, 170, 25, 125, 108
 parser.add_argument('--cfe_epochs', default = 10, type = np.int32 ) #100 for mnist, 200 for CUB
-parser.add_argument('--l1_weight', default = 2, type = np.float32) # 2 default
+parser.add_argument('--l1_weight', default = 0.1, type = np.float32) # 2 default
 parser.add_argument('--save_logFile', default = True, type=str2bool) #
 
 #parser.add_argument('--pretrained', default = False) # load self-pretrained model for cifar dataset... i.e. load base model already trained on cifar-10
@@ -54,7 +54,7 @@ parser.add_argument('--save_logFile', default = True, type=str2bool) #
 parser.add_argument('--augmentation' ,default = True, type=str2bool)## 
 
 #base model parameters
-parser.add_argument('--dataset',default = 'mnist')#NIST, BraTS,mnist, cifar10, CUB200, #cxr1000, #catsvsdogs, #VOC2010
+parser.add_argument('--dataset',default = 'fmnist')#NIST, BraTS,mnist, cifar10, CUB200, #cxr1000, #catsvsdogs, #VOC2010, #fmnist
 parser.add_argument('--save_directory',default = './trained_weights/')
 parser.add_argument('--train_using_builtin_fit_method',default = True)#for training base model easily
 parser.add_argument('--train',default = False)
