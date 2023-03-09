@@ -14,6 +14,8 @@ import os
 from tf_explain_modified.core.grad_cam import GradCAM
 from skimage.transform import resize
 from tqdm import tqdm
+from sklearn.metrics import classification_report
+from load_data import label_map
 
 test_acc_metric = tf.keras.metrics.CategoricalAccuracy(name='test_accuracy')
 test_loss_metric = tf.keras.metrics.Mean(name='test_loss')
@@ -36,7 +38,9 @@ def model_accuracy_filters(model,gen, enabled_filters, args):
     gen.batch_index=0
     
     
-    #fileName = args.model[:-1] + '_mean_fmaps_all.npy'       
+    #fileName = args.model[:-1] + '_mean_fmaps_all.npy'  
+    pred_y = []
+    gt_y=[]     
     with tqdm(total=batches) as progBar:
         #pass
         for step in range(batches):
@@ -44,11 +48,14 @@ def model_accuracy_filters(model,gen, enabled_filters, args):
           if enabled_filters is None:
               default_fmatrix = tf.ones((len(x_batch_test), model.output[1].shape[3]))
           else:
-              default_fmatrix = np.ones((len(x_batch_test), model.output[1].shape[3]))
+              default_fmatrix = np.ones((len(x_batch_test), 512))#model.output[1].shape[3]))
               for i in range(len(x_batch_test)):
                   default_fmatrix[i,:] = enabled_filters
           
           pred_probs = test_step(model, x_batch_test, default_fmatrix)
+          
+          pred_y.append(np.argmax(pred_probs,1))
+          gt_y.append(np.argmax(y_batch_test,1))
           
           test_acc_metric(y_batch_test, pred_probs)
           test_recall_metric(y_batch_test, pred_probs)
@@ -64,8 +71,12 @@ def model_accuracy_filters(model,gen, enabled_filters, args):
     print('\nTest loss:', test_loss.numpy())
     print('Test accuracy:', test_acc.numpy()) 
     print('Test recall for class ',target_class,': ', test_recall.numpy()) 
-
-    return test_acc, test_loss
+    
+    gt_y=np.concatenate(gt_y)
+    pred_y=np.concatenate(pred_y)
+    print(classification_report(gt_y,pred_y,digits=4))
+    c_report = classification_report(gt_y,pred_y,digits=4,output_dict=True)
+    return test_acc, test_loss, c_report
         
 
 

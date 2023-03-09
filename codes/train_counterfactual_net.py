@@ -9,11 +9,7 @@ import tensorflow as tf
 import numpy as np
 import math
 from tqdm import tqdm 
-from tensorflow.keras.layers import GlobalAveragePooling2D
 from tensorflow.python.keras import backend as K
-from codes.support_functions import get_heatmap_only_batch
-from tf_explain_modified.core.grad_cam import GradCAM
-import matplotlib.pyplot as plt
 import sys
 
 #%% manual training loop
@@ -30,7 +26,7 @@ test_acc_metric = tf.keras.metrics.CategoricalAccuracy(name='test_accuracy')
 
 
 #optimizer = tf.keras.optimizers.RMSprop(0.001)
-optimizer = tf.keras.optimizers.SGD(lr=0.01/10, momentum=0.9)
+optimizer = tf.keras.optimizers.SGD(lr=0.01/10, momentum=0.9,name='opt')
 
 train_loss_metric = tf.keras.metrics.Mean(name='train_loss')
 test_loss_metric = tf.keras.metrics.Mean(name='test_loss')
@@ -63,35 +59,35 @@ def my_l1_loss_pre_Softmax(x):
 
 def my_filter_count(x):
     #x = filter matrix
-    non_zero_in_batch = tf.math.count_nonzero(x)
-    #divide by batch size
-    non_zero = non_zero_in_batch/x.shape[0]
+    non_zero_in_batch = tf.math.count_nonzero(x,1,dtype='float32')
+    non_zero = tf.math.reduce_mean(non_zero_in_batch)
     return non_zero   
 #%%
 @tf.function 
-def train_step(x_batch_test, alter_class, combined, W,base_model,L1_weight,PP_mode):
-    perturb_loss=False
-    explainer = GradCAM()
-    if PP_mode:
-        default_fmatrix = tf.ones((x_batch_test.shape[0],base_model.output[1].shape[3]))#512=generator.output.shape[1]
-    else:
-        default_fmatrix = tf.zeros((x_batch_test.shape[0],base_model.output[1].shape[3]))#512=generator.output.shape[1]
+def train_step(x_batch_test, alter_class, combined, W,base_model,L1_weight,PP_mode,for_alter_class):
+    # if PP_mode:
+    #     default_fmatrix = tf.ones((x_batch_test.shape[0],base_model.output[1].shape[3]))
+    # else:
+    #     default_fmatrix = tf.zeros((x_batch_test.shape[0],base_model.output[1].shape[3]))
+
 
     with tf.GradientTape(persistent=False) as tape: #persistent=False  Boolean controlling whether a persistent gradient tape is created. False by default, which means at most one call can be made to the gradient() method on this object. 
     
         alter_prediction,fmatrix,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax = combined(x_batch_test, training=True)
         
-        if perturb_loss:
-            output,only_heatmaps = explainer.explain((x_batch_test,None),base_model,3,image_nopreprocessed=None,fmatrix=fmatrix,image_weight=0.0)#np.argmin(y_batch_test[img_ind])
-            masked_preprocessed = get_heatmap_only_batch(only_heatmaps,x_batch_test)        
-            perturbed_probs, perturbed_fmaps, perturbed_mean_fmap, perturbed_modified_mean_fmap_activations,perturbed_pre_softmax = base_model([masked_preprocessed,default_fmatrix])#with eager
-            #plt.imshow(masked_preprocessed), plt.axis('off'), plt.title('perturbed'),plt.show()
-
-            perturb_loss = loss_fn(alter_class, perturbed_probs)            
-        
-        
         counterfactual_loss = loss_fn(alter_class, alter_prediction)
-        pre_softmax_loss = my_l1_loss_pre_Softmax(pre_softmax[:,tf.argmax(alter_class,axis=1)[0]])
+        if for_alter_class:
+            pre_softmax_loss = my_l1_loss_pre_Softmax(pre_softmax[:,tf.argmax(alter_class,axis=1)[0]])
+        else:
+            pre_softmax_logits=[]
+            for i in range(len(pre_softmax)):
+                logits = pre_softmax[i,tf.argmax(alter_class,axis=1)[i]]
+                pre_softmax_logits.append(logits)
+            pre_softmax_logits = tf.convert_to_tensor(pre_softmax_logits)
+            # pre_softmax_logits = tf.gather_nd(pre_softmax,index_for_pre_softmax)
+            
+            pre_softmax_loss = my_l1_loss_pre_Softmax(pre_softmax_logits)
+
         l1_loss_PP = 0.0
         l1_loss_PN = 0.0
         if PP_mode:
@@ -106,12 +102,11 @@ def train_step(x_batch_test, alter_class, combined, W,base_model,L1_weight,PP_mo
         #2x for CUB
     
     gradients = tape.gradient(combined_loss, combined.trainable_variables,unconnected_gradients='zero')
-    optimizer.apply_gradients(zip(gradients, combined.trainable_variables))
+    optimizer.apply_gradients(zip(gradients, combined.trainable_variables))#,name='opt_grad'+str(np.random.randint(10)))
       
     train_loss_metric(counterfactual_loss)
     train_loss_metric_2(l1_loss_PP)
     train_loss_metric_3(pre_softmax_loss)
-    train_loss_metric_4(perturb_loss)
 
     train_loss_metric_5(my_filter_count(fmatrix))
     
@@ -143,59 +138,8 @@ def test_step(x_batch_test, alter_class, combined, W,base_model,L1_weight,PP_mod
     #return x1,x2,target1,target2
     
     
-#@tf.function 
-def train_step_experimental(x_batch_test, alter_class, combined, W,base_model):
-    perturb_loss=True
-    explainer = GradCAM()
-    default_fmatrix = tf.ones((len(x_batch_test),512))#512=enerator.output.shape[1]
-
-    alter_prediction,fmatrix,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax = combined([x_batch_test], training=True) #2nd x_batch_test is dummy input in place of masked input
-    output,only_heatmaps = explainer.explain((x_batch_test,None),base_model,3,image_nopreprocessed=None,fmatrix=fmatrix,image_weight=0.0)#np.argmin(y_batch_test[img_ind])
-    masked_preprocessed = get_heatmap_only_batch(only_heatmaps,x_batch_test)        
-
-    with tf.GradientTape(persistent=False) as tape: #persistent=False  Boolean controlling whether a persistent gradient tape is created. False by default, which means at most one call can be made to the gradient() method on this object. 
-    
-        
-        #if perturb_loss:
-        #perturbed_probs, perturbed_fmaps, perturbed_mean_fmap, perturbed_modified_mean_fmap_activations,perturbed_pre_softmax = base_model([masked_preprocessed,default_fmatrix])#with eager
-        #perturbed_probs,per_fmatrix,per_fmaps,per_mean_fmap,per_modified_mean_fmap_activations,per_pre_softmax = combined(masked_preprocessed, training=True)
-        perturbed_probs,fmatrix,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax = combined([masked_preprocessed], training=True) #2nd x_batch_test is dummy input in place of masked input
-
-        #plt.imshow(masked_preprocessed), plt.axis('off'), plt.title('perturbed'),plt.show()
-
-        perturb_loss = loss_fn(alter_class, perturbed_probs)
-        #TODO: issue: no gradients provided for any variable when perturbed used like this             
-        #perturb_loss = loss_fn(alter_class, perturbed_probs)
-        counterfactual_loss = loss_fn(alter_class, alter_prediction)
-        l1_loss = my_l1_loss(fmatrix)
-        
-        #pre_softmax shape = batch x num_classes
-        #try BCE loss without logits, i.e. maximis this value
-        
-        pre_softmax_loss = my_l1_loss_pre_Softmax(pre_softmax[:,tf.argmax(alter_class,axis=1)[0]])
-        
-        #combined_loss = W*counterfactual_loss + 2*l1_loss + 1*pre_softmax_loss + perturb_loss
-        combined_loss = perturb_loss
-
-    
-    
-    gradients = tape.gradient(combined_loss, combined.trainable_variables)
-    optimizer.apply_gradients(zip(gradients, combined.trainable_variables))
-      
-    train_loss_metric(counterfactual_loss)
-    train_loss_metric_2(l1_loss)
-    train_loss_metric_3(pre_softmax_loss)
-    train_loss_metric_4(perturb_loss)
-
-    
-    train_acc_metric(alter_class, alter_prediction)
-    #return x1,x2,target1,target2
-
-
-
-
 #%%
-def train_counterfactual_net(model,weights_path, generator, train_gen,test,resume,epochs,L1_weight,for_class,label_map,logging,args):
+def train_counterfactual_net(model,weights_path,resume_path, generator, train_gen,test,resume,epochs,L1_weight,for_class,label_map,logging,args):
     #assumption: its a standrd model, not interpretable model
    
     if args.counterfactual_PP:
@@ -211,53 +155,8 @@ def train_counterfactual_net(model,weights_path, generator, train_gen,test,resum
     # noise as input => generates images => determines validity 
     #img = tf.keras.Input(shape=model.input[0].shape)
     
-    experimental=False
-    if experimental:
-        img = tf.keras.Input(shape=model.input_shape[0][1])
-        
-        default_fmatrix = tf.Variable(
-        initial_value=np.ones((2,512)), trainable=False)
-        #default_fmatrix = tf.convert_to_tensor(np.ones((2,512)))
-        original_prediction,_,_,_,_ = model([img,default_fmatrix])
-    
-        fmatrix = generator(img)
-        
-        alter_prediction,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax = model([img,fmatrix])
-        
-        #assume masked image
-        #img2 = tf.keras.Input(shape=(224,224,3))
-        #default_fmatrix = tf.ones(tf.shape(fmatrix))
-        #perturbed_prediction,p_fmaps,p_mean_fmap,p_modified_mean_fmap_activations,p_pre_softmax = model([img2,default_fmatrix])
-        
-        
-        # explainer = GradCAM()
-        # default_fmatrix = tf.ones_like(fmatrix)    
-        # output,only_heatmaps = explainer.explain((img,None),model,3,image_nopreprocessed=None,fmatrix=fmatrix,image_weight=0.0)#np.argmin(y_batch_test[img_ind])
-        # masked_preprocessed = get_heatmap_only_batch(only_heatmaps,np.expand_dims(img,0))        
-        # perturbed_prediction, perturbed_fmaps, perturbed_mean_fmap, perturbed_modified_mean_fmap_activations,perturbed_pre_softmax = model([masked_preprocessed,default_fmatrix])#with eager
-        
-        #img2 is for masked input
-        combined = tf.keras.Model(inputs=[img], outputs=[alter_prediction,original_prediction,fmatrix,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax])
-        combined.compile(loss='binary_crossentropy', optimizer=optimizer)
-        combined.summary()
-    else:
-        img = tf.keras.Input(shape=model.input_shape[0][1:4])
-        
-        fmatrix = generator(img)
-        
-        alter_prediction,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax = model([img,fmatrix])
-        
-        
-        combined = tf.keras.Model(inputs=img, outputs=[alter_prediction,fmatrix,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax])#,PN_prediction])
-        combined.compile(loss='binary_crossentropy', optimizer=optimizer)
-        combined.summary()
-    
-    #VOC-dataset
-    #label_map = ['bird',  'cat', 'cow', 'dog', 'horse', 'sheep']
-    #label_map = ['cat', 'dog'] #catvsdog dataset
-
-    for_alter_class=True#if false--> same class, oppposite class
-    for_fixed_alter_class=True
+    for_alter_class=True if not args.train_singular_counterfactual_net else False #if false--> same class, oppposite class
+    for_fixed_alter_class=True if not args.choose_subclass else False
     
     #manually set according VOC dataset classes
     for_class = for_class
@@ -267,14 +166,44 @@ def train_counterfactual_net(model,weights_path, generator, train_gen,test,resum
         else:
             print('training for alter class')
     else:
-        print('training for same class')
+        print('training for ALL class')
 
     
+    start_epoch=0
     if resume:
+        start_epoch = args.resume_from_epoch
         if for_alter_class:
-            combined.load_weights(filepath=weights_path+'/'+mode+'counterfactual_combined_model_fixed_'+str(label_map[for_class])+'_alter_class.hdf5')
+            if args.choose_subclass:
+                generator.load_weights(filepath=resume_path+'/counterfactual_generator_model_only_'+str(label_map[for_class])+'_alter_class_epochs_'+str(args.resume_from_epoch)+'.hdf5')
+            else:
+                generator.load_weights(filepath=resume_path+'/'+mode+'counterfactual_generator_model_fixed_'+str(label_map[for_class])+'_alter_class_epochs_'+str(args.resume_from_epoch)+'.hdf5') #resume from epochs 3 #args.cfe_epochs
         else:
-            combined.load_weights(filepath=weights_path+'/counterfactual_combined_model_same_class_epoch_35.hdf5')
+            generator.load_weights(filepath=resume_path+'/counterfactual_combined_model_ALL_classes_epoch_68_16_batch.hdf5')
+            
+            
+    img = tf.keras.Input(shape=model.input_shape[0][1:4])
+    
+    fmatrix = generator(img)
+    
+    #########################
+    #binarization here is not reducing loss during training. So only use it for test time and not for training
+    #fmatrix = tf.where(fmatrix > 0, 1.0, 0.0)
+    #########################
+
+    alter_prediction,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax = model([img,fmatrix])
+    _alter_prediction,_fmaps,_mean_fmap,_modified_mean_fmap_activations,_pre_softmax = model([img,1-fmatrix])
+    
+    
+    combined = tf.keras.Model(inputs=img, outputs=[alter_prediction,fmatrix,fmaps,mean_fmap,modified_mean_fmap_activations,pre_softmax])#,PN_prediction])
+    combined.compile(loss='binary_crossentropy', optimizer=optimizer)
+    combined.summary()
+    
+
+    #VOC-dataset
+    #label_map = ['bird',  'cat', 'cow', 'dog', 'horse', 'sheep']
+    #label_map = ['cat', 'dog'] #catvsdog dataset
+
+
     
     batches=math.ceil(train_gen.n/train_gen.batch_size)
     train_gen.reset()
@@ -286,17 +215,12 @@ def train_counterfactual_net(model,weights_path, generator, train_gen,test,resum
     #default_fmatrix = tf.ones((train_gen.batch_size,generator.output.shape[1]))
     if logging: interval = 10000
     else: interval = 0.1
+    
+    Weight = 1
 
     if not test:
-        Weight=20 # not used
-        for epoch in range(0, epochs):
+        for epoch in range(start_epoch, epochs):
           #print('Start of epoch %d' % (epoch,))
-              
-            if epoch<3:
-                Weight =1# Weight/2 #10-epoch
-                #print('weight for BCE loss:', Weight)
-            else:
-                Weight = 1
             
             #for step,(x_batch_train, y_batch_train) in enumerate(dataset):
             with tqdm(total=batches, file=sys.stdout,mininterval=interval) as progBar:
@@ -306,49 +230,51 @@ def train_counterfactual_net(model,weights_path, generator, train_gen,test,resum
                   #map 2-class Gt to 6 class GT
                   #for VOC
                   if args.choose_subclass:
-                      y_batch_test_2=np.zeros((len(y_batch_test), 2))
+                      y_batch_test_2=np.zeros((len(y_batch_test), 200))
                       y_batch_test_2[:,for_class] = y_batch_test[:,0]
                       #y_batch_test_2[:,3] = y_batch_test[:,1]
                       y_batch_test=y_batch_test_2
                   
-                  if args.counterfactual_PP:
-                      default_fmatrix = tf.ones((len(x_batch_test),generator.output.shape[1]))
-                  else:
-                      #default_fmatrix = tf.zeros((len(x_batch_test),generator.output[0].shape[1]))
-                      default_fmatrix = tf.zeros((len(x_batch_test),generator.output.shape[1]))
-                  predictions,fmaps,_ ,_,pre_softmax= model([x_batch_test,default_fmatrix], training=False)
+                  # if args.counterfactual_PP:
+                  #     default_fmatrix = tf.ones((len(x_batch_test),generator.output.shape[1]))
+                  # else:
+                  #     #default_fmatrix = tf.zeros((len(x_batch_test),generator.output[0].shape[1]))
+                  #     default_fmatrix = tf.zeros((len(x_batch_test),generator.output.shape[1]))
+                  #predictions,fmaps,_ ,_,pre_softmax= model([x_batch_test,default_fmatrix], training=False)
                   
                   #it can be wrong predictions
                   #better to choose real class prediction
                   if for_alter_class:
-                      if for_fixed_alter_class:
-                          alter_class = np.zeros_like(y_batch_test)
-                          alter_class[:,for_class] = 1
+                       # if for_fixed_alter_class:
+                       alter_class = np.zeros_like(y_batch_test)
+                       alter_class[:,for_class] = 1
                           #alter_class = y_batch_test#sanity check
-                      else:
-                          alter_class = 1-y_batch_test
+                      # else:
+                          # alter_class = 1-y_batch_test
                   else:
                       alter_class = y_batch_test
                   
     
-                  train_step(x_batch_test, alter_class,combined,Weight,model,L1_weight,args.counterfactual_PP)
+                  train_step(x_batch_test, alter_class,combined,Weight,model,L1_weight,args.counterfactual_PP, for_alter_class)
                  
-                  
-                  progBar.set_description('epoch %d' % (epoch),refresh=False)
-                  progBar.set_postfix(loss=[train_loss_metric.result().numpy(),train_loss_metric_2.result().numpy(),train_loss_metric_3.result().numpy(),train_loss_metric_4.result().numpy(), train_loss_metric_5.result().numpy(),train_loss_metric_6.result().numpy()], acc=train_acc_metric.result().numpy(),refresh=False)
-    
-                  progBar.update()
+                  if (args.choose_subclass or True):
+                      progBar.set_description('epoch %d' % (epoch),refresh=False)
+                      progBar.set_postfix(loss=[train_loss_metric.result().numpy(),train_loss_metric_2.result().numpy(),train_loss_metric_3.result().numpy(),train_loss_metric_4.result().numpy(), train_loss_metric_5.result().numpy(),train_loss_metric_6.result().numpy()], acc=train_acc_metric.result().numpy(),refresh=False)
+        
+                      progBar.update()
              
                 #end for
             #end with
             #save model at end of each epoch combined or generator?
             if for_alter_class:#false for single image
                 if for_fixed_alter_class:
-                    combined.save_weights(filepath=weights_path+'/'+mode+'counterfactual_combined_model_fixed_'+str(label_map[for_class])+'_alter_class.hdf5')
+                    generator.save_weights(filepath=weights_path+'/'+mode+'counterfactual_generator_model_fixed_'+str(label_map[for_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
                 else:
-                    combined.save_weights(filepath=weights_path+'/counterfactual_combined_model_alter_class_epoch_'+str(epoch)+'.hdf5')
+                    pass
+                    if epoch%100 ==0:
+                        generator.save_weights(filepath=weights_path+'/counterfactual_generator_model_only_'+str(label_map[for_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
             else:
-                combined.save_weights(filepath=weights_path+'/counterfactual_combined_model_same_class_epoch_'+str(epoch)+'.hdf5')
+                generator.save_weights(filepath=weights_path+'/'+mode+'counterfactual_generator_model_ALL_classes_epoch_'+str(epoch)+'.hdf5')
             #generator.save_weights(filepath=weights_path+'/counterfactual_generator_model_epoch_'+str(epoch)+'.hdf5')
             
             # Reset training metrics at the end of each epoch
@@ -361,14 +287,19 @@ def train_counterfactual_net(model,weights_path, generator, train_gen,test,resum
           
         #combined.save_weights(filepath=weights_path+'/counterfactual_combined_model_fixed_dog_alter_class_single_Image_epoch_'+str(epoch)+'.hdf5')
         #end epoch
+        if args.choose_subclass:
+            generator.save_weights(filepath=weights_path+'/counterfactual_generator_model_only_'+str(label_map[for_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
     else:
         #print('Testing...')
+        assert(False)
+        #update code to address changes causes by All_classes training
+        
         if for_alter_class:
             # combined.load_weights(filepath=weights_path+'/counterfactual_combined_model_alter_class_epoch_29.hdf5')
-            combined.load_weights(filepath=weights_path+'/'+mode+'counterfactual_combined_model_fixed_'+str(label_map[args.alter_class])+'_alter_class.hdf5')
+            generator.load_weights(filepath=weights_path+'/'+mode+'counterfactual_generator_model_fixed_'+str(label_map[args.alter_class])+'_alter_class_epochs_'+str(args.cfe_epochs)+'.hdf5')
 
         else:
-            combined.load_weights(filepath=weights_path+'/counterfactual_combined_model_same_class_epoch_29.hdf5')
+            generator.load_weights(filepath=weights_path+'/counterfactual_generator_model_same_class_epoch_29.hdf5')
 
         batches=math.ceil(train_gen.n/train_gen.batch_size)
         
