@@ -123,7 +123,7 @@ for loop in range(start_class, classes):
         if args.dataset == 'mnist':
             model.load_weights(filepath=pretrained_weights_path+'/mnist_classifier_weights_GAP_epoch30.hdf5')
         elif args.dataset == 'fmnist':
-            model.load_weights(filepath=pretrained_weights_path+'/fmnist_classifier_weights_GAP_epoch30_128_filters.hdf5')
+            model.load_weights(filepath=pretrained_weights_path+'/classifier_weights_encoded_fmnist_ephocs_150.h5')
 
     else:
         if args.dataset == 'mnist':
