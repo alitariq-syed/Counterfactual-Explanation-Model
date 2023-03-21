@@ -87,43 +87,60 @@ for loop in range(start_class, classes):
 
 
     #%% create base model
-    top_filters = base_model.output_shape[3] # flters in top conv layer (512 for VGG)
-    fmatrix = tf.keras.layers.Input(shape=(top_filters),name='fmatrix')
-    #flag = tf.keras.layers.Input(shape=(1))
-
+    #modify base model (once it has been pre-trained separately) to be used with CF model later
+    GAP_layer = True
+    if args.counterfactual_PP:
+        top_filters = base_model.output_shape[3] # flters in top conv layer (512 for VGG)
+        fmatrix = tf.keras.layers.Input(shape=(top_filters),name='fmatrix')
+        modified_output = base_model.output
+    elif GAP_layer == True:
+        top_filters = base_model.output_shape[3] # flters in top conv layer (512 for VGG)
+        fmatrix = tf.keras.layers.Input(shape=(top_filters),name='fmatrix')
+        modified_output = base_model.output        
+    else:#PN
+        top_filters = base_model.output_shape # flters in top conv layer (512 for VGG)
+        fmatrix = tf.keras.layers.Input(shape=(base_model.output.shape[1:]),name='fmatrix')
+        modified_output = base_model.output+fmatrix
+   
     if args.model == 'VGG16/' or args.model == 'customCNN/':
-        x =  MaxPool2D(name='maxpool2')(base_model.output)
+        x =  MaxPool2D(name='maxpool2')(modified_output)
     elif args.model == 'resnet50/':
         x =  base_model.output
     elif args.model == 'efficientnet/':
         x =  base_model.output
     mean_fmap = GlobalAveragePooling2D()(x)
     
-
-
-    #modify base model (once it has been pre-trained separately) to be used with CF model later
+    
     if args.counterfactual_PP:
-        modified_fmap = mean_fmap*fmatrix
+        modified_fmap = mean_fmap * fmatrix
+    elif GAP_layer == True:
+        modified_fmap = mean_fmap + fmatrix
     else:#PN
-        modified_fmap = mean_fmap+fmatrix
+        modified_fmap = mean_fmap    
+
     pre_softmax = Dense(num_classes,activation=None)(modified_fmap)
     out = tf.keras.layers.Activation(top_activation)(pre_softmax)
-    model = tf.keras.Model(inputs=[base_model.input, fmatrix], outputs= [out,base_model.output, mean_fmap, modified_fmap,pre_softmax],name='base_model')
+       
+
+    model = tf.keras.Model(inputs=[base_model.input, fmatrix], outputs= [out,base_model.output, mean_fmap, modified_fmap, pre_softmax],name='base_model')
+
+    model.summary()
 
     if args.counterfactual_PP:
         default_fmatrix = tf.ones((train_gen.batch_size,base_model.output.shape[3]))
-    else:
+    elif GAP_layer == True:
         default_fmatrix = tf.zeros((train_gen.batch_size,base_model.output.shape[3]))
+    else:
+        default_fmatrix = tf.zeros((train_gen.batch_size,base_model.output.shape[1],base_model.output.shape[2], base_model.output.shape[3]))
 
 
-    model.summary()
 
     #load saved weights
     if args.model =='customCNN/':
         if args.dataset == 'mnist':
             model.load_weights(filepath=pretrained_weights_path+'/mnist_classifier_weights_GAP_epoch30.hdf5')
         elif args.dataset == 'fmnist':
-            model.load_weights(filepath=pretrained_weights_path+'/classifier_weights_encoded_fmnist_ephocs_150.h5')
+            model.load_weights(filepath=pretrained_weights_path+'/classifier_weights_encoded_fmnist_epochs_150.h5')
 
     else:
         if args.dataset == 'mnist':
@@ -206,9 +223,11 @@ for loop in range(start_class, classes):
         mean_fmap_dropout = mean_fmap
         
     if args.counterfactual_PP:
-        x = Dense(num_filters,activation='sigmoid')(mean_fmap_dropout)#kernel_regularizer='l1' #,activity_regularizer='l1'
+        x = Dense(num_filters, activation='sigmoid')(mean_fmap_dropout)#kernel_regularizer='l1' #,activity_regularizer='l1'
+    elif GAP_layer == True:
+        x = Dense(num_filters, activation='relu')(mean_fmap_dropout)
     else:
-        x = Dense(num_filters,activation='relu')(mean_fmap_dropout)
+        x = Conv2D(num_filters, (3, 3), activation = 'relu', padding = 'same')(base_model.output)
 
     #x = tf.keras.layers.Lambda(masking_layer)(x)
     #x = CustomLayer()(x)

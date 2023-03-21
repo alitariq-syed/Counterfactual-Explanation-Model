@@ -112,7 +112,8 @@ def load_cfe_model(alter_class = None):
     fmatrix = counterfactual_generator(img)
     
     #binarization here is not reducing loss during training. So only use it for test time and not for training
-    fmatrix = tf.where(fmatrix > 0, 1.0, 0.0)
+    if args.counterfactual_PP:
+        fmatrix = tf.where(fmatrix > 0, 1.0, 0.0)
 
     alter_prediction,fmaps,mean_fmap, modified_mean_fmap_activations,pre_softmax = model([img,fmatrix])
     

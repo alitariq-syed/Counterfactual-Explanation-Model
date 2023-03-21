@@ -6,3 +6,4 @@
 /filter_visualization/
 *.png
 /.idea
+*.h5

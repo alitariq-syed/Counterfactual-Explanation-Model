@@ -1,5 +1,5 @@
 
- Namespace(filter_visualization=True, user_evaluation=False, train_counterfactual_net=True, train_all_classes=True, dropout=False, train_singular_counterfactual_net=False, choose_subclass=False, counterfactual_PP=False, resume_counterfactual_net=False, resume_from_epoch=10, test_counterfactual_net=False, load_counterfactual_net=True, resume=True, alter_class=0, analysis_class=6, find_global_filters=False, cfe_epochs=10, l1_weight=0.1, save_logFile=True, augmentation=True, dataset='fmnist', save_directory='./trained_weights/', train_using_builtin_fit_method=True, train=False, fine_tune=False, test=True, model='customCNN/', imagenet_weights=False) 
+ Namespace(filter_visualization=True, user_evaluation=False, train_counterfactual_net=True, train_all_classes=True, dropout=False, train_singular_counterfactual_net=False, choose_subclass=False, counterfactual_PP=False, resume_counterfactual_net=False, resume_from_epoch=30, test_counterfactual_net=False, load_counterfactual_net=True, resume=True, alter_class=0, analysis_class=6, find_global_filters=False, cfe_epochs=10, l1_weight=2, save_logFile=True, augmentation=True, dataset='fmnist', save_directory='./trained_weights/', train_using_builtin_fit_method=True, train=False, fine_tune=False, test=True, model='customCNN/', imagenet_weights=False) 
 
 Model: "base_model"
 __________________________________________________________________________________________________
@@ -9,33 +9,35 @@ input_1 (InputLayer)            [(None, 28, 28, 1)]  0
 __________________________________________________________________________________________________
 conv2d (Conv2D)                 (None, 28, 28, 64)   640         input_1[0][0]                    
 __________________________________________________________________________________________________
-max_pooling2d (MaxPooling2D)    (None, 14, 14, 64)   0           conv2d[0][0]                     
+conv2d_1 (Conv2D)               (None, 28, 28, 64)   36928       conv2d[0][0]                     
 __________________________________________________________________________________________________
-conv2d_1 (Conv2D)               (None, 14, 14, 64)   36928       max_pooling2d[0][0]              
+max_pooling2d (MaxPooling2D)    (None, 14, 14, 64)   0           conv2d_1[0][0]                   
 __________________________________________________________________________________________________
-max_pooling2d_1 (MaxPooling2D)  (None, 7, 7, 64)     0           conv2d_1[0][0]                   
+conv2d_2 (Conv2D)               (None, 14, 14, 128)  73856       max_pooling2d[0][0]              
 __________________________________________________________________________________________________
-conv2d_2 (Conv2D)               (None, 7, 7, 64)     36928       max_pooling2d_1[0][0]            
+conv2d_3 (Conv2D)               (None, 14, 14, 128)  147584      conv2d_2[0][0]                   
 __________________________________________________________________________________________________
-max_pooling2d_2 (MaxPooling2D)  (None, 3, 3, 64)     0           conv2d_2[0][0]                   
+max_pooling2d_1 (MaxPooling2D)  (None, 7, 7, 128)    0           conv2d_3[0][0]                   
 __________________________________________________________________________________________________
-conv2d_3 (Conv2D)               (None, 3, 3, 128)    73856       max_pooling2d_2[0][0]            
+conv2d_4 (Conv2D)               (None, 7, 7, 256)    295168      max_pooling2d_1[0][0]            
 __________________________________________________________________________________________________
-maxpool2 (MaxPooling2D)         (None, 1, 1, 128)    0           conv2d_3[0][0]                   
+conv2d_5 (Conv2D)               (None, 7, 7, 256)    590080      conv2d_4[0][0]                   
 __________________________________________________________________________________________________
-global_average_pooling2d (Globa (None, 128)          0           maxpool2[0][0]                   
+maxpool2 (MaxPooling2D)         (None, 3, 3, 256)    0           conv2d_5[0][0]                   
 __________________________________________________________________________________________________
-fmatrix (InputLayer)            [(None, 128)]        0                                            
+global_average_pooling2d (Globa (None, 256)          0           maxpool2[0][0]                   
 __________________________________________________________________________________________________
-tf.__operators__.add (TFOpLambd (None, 128)          0           global_average_pooling2d[0][0]   
+fmatrix (InputLayer)            [(None, 256)]        0                                            
+__________________________________________________________________________________________________
+tf.__operators__.add (TFOpLambd (None, 256)          0           global_average_pooling2d[0][0]   
                                                                  fmatrix[0][0]                    
 __________________________________________________________________________________________________
-dense (Dense)                   (None, 10)           1290        tf.__operators__.add[0][0]       
+dense (Dense)                   (None, 10)           2570        tf.__operators__.add[0][0]       
 __________________________________________________________________________________________________
 activation (Activation)         (None, 10)           0           dense[0][0]                      
 ==================================================================================================
-Total params: 149,642
-Trainable params: 149,642
+Total params: 1,146,826
+Trainable params: 1,146,826
 Non-trainable params: 0
 __________________________________________________________________________________________________
 weights loaded
@@ -47,30 +49,32 @@ input_1 (InputLayer)         [(None, 28, 28, 1)]       0
 _________________________________________________________________
 conv2d (Conv2D)              (None, 28, 28, 64)        640       
 _________________________________________________________________
+conv2d_1 (Conv2D)            (None, 28, 28, 64)        36928     
+_________________________________________________________________
 max_pooling2d (MaxPooling2D) (None, 14, 14, 64)        0         
 _________________________________________________________________
-conv2d_1 (Conv2D)            (None, 14, 14, 64)        36928     
+conv2d_2 (Conv2D)            (None, 14, 14, 128)       73856     
 _________________________________________________________________
-max_pooling2d_1 (MaxPooling2 (None, 7, 7, 64)          0         
+conv2d_3 (Conv2D)            (None, 14, 14, 128)       147584    
 _________________________________________________________________
-conv2d_2 (Conv2D)            (None, 7, 7, 64)          36928     
+max_pooling2d_1 (MaxPooling2 (None, 7, 7, 128)         0         
 _________________________________________________________________
-max_pooling2d_2 (MaxPooling2 (None, 3, 3, 64)          0         
+conv2d_4 (Conv2D)            (None, 7, 7, 256)         295168    
 _________________________________________________________________
-conv2d_3 (Conv2D)            (None, 3, 3, 128)         73856     
+conv2d_5 (Conv2D)            (None, 7, 7, 256)         590080    
 _________________________________________________________________
-maxpool2 (MaxPooling2D)      (None, 1, 1, 128)         0         
+maxpool2 (MaxPooling2D)      (None, 3, 3, 256)         0         
 _________________________________________________________________
-global_average_pooling2d_1 ( (None, 128)               0         
+global_average_pooling2d_1 ( (None, 256)               0         
 _________________________________________________________________
-dense_1 (Dense)              (None, 128)               16512     
+dense_1 (Dense)              (None, 256)               65792     
 =================================================================
-Total params: 164,864
-Trainable params: 16,512
-Non-trainable params: 148,352
+Total params: 1,210,048
+Trainable params: 65,792
+Non-trainable params: 1,144,256
 _________________________________________________________________
 threshold:  0.5
-l1 weight:  0.1
+l1 weight:  2
 training CF model for alter class:  0
 Training CF model for PNs
 training for fixed alter class:  0
@@ -80,22 +84,22 @@ Layer (type)                    Output Shape         Param #     Connected to
 ==================================================================================================
 input_1 (InputLayer)            [(None, 28, 28, 1)]  0                                            
 __________________________________________________________________________________________________
-counterfactual_model (Functiona (None, 128)          164864      input_1[0][0]                    
+counterfactual_model (Functiona (None, 256)          1210048     input_1[0][0]                    
 __________________________________________________________________________________________________
-base_model (Functional)         [(None, 10), (None,  149642      input_1[0][0]                    
+base_model (Functional)         [(None, 10), (None,  1146826     input_1[0][0]                    
                                                                  counterfactual_model[0][0]       
 ==================================================================================================
-Total params: 166,154
-Trainable params: 16,512
-Non-trainable params: 149,642
+Total params: 1,212,618
+Trainable params: 65,792
+Non-trainable params: 1,146,826
 __________________________________________________________________________________________________
-  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 0: 100%|#| 1875/1875 [00:22<00:00, 84.15it/s, acc=0.973, loss=[0.16159783, 0.0, 0.2448958, 0.0, 19.541466, 1.6809
-  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 1: 100%|#| 1875/1875 [00:20<00:00, 93.16it/s, acc=0.994, loss=[0.07224973, 0.0, 0.26564157, 0.0, 10.384784, 1.486
-  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 2: 100%|#| 1875/1875 [00:21<00:00, 87.20it/s, acc=0.996, loss=[0.067296706, 0.0, 0.26775274, 0.0, 8.205167, 1.402
-  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 3: 100%|#| 1875/1875 [00:19<00:00, 96.49it/s, acc=0.997, loss=[0.064533904, 0.0, 0.2681227, 0.0, 7.2373166, 1.355
-  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 4: 100%|#| 1875/1875 [00:17<00:00, 107.96it/s, acc=0.998, loss=[0.06299119, 0.0, 0.26877713, 0.0, 6.7004833, 1.32
-  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 5: 100%|#| 1875/1875 [00:18<00:00, 103.49it/s, acc=0.999, loss=[0.06203699, 0.0, 0.26966977, 0.0, 6.3335166, 1.30
-  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 6: 100%|#| 1875/1875 [00:20<00:00, 93.11it/s, acc=0.999, loss=[0.061348494, 0.0, 0.27069, 0.0, 6.0773835, 1.28769
-  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 7: 100%|#| 1875/1875 [00:25<00:00, 73.57it/s, acc=0.999, loss=[0.060757883, 0.0, 0.271746, 0.0, 5.877917, 1.27506
-  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 8: 100%|#| 1875/1875 [00:24<00:00, 76.28it/s, acc=0.999, loss=[0.06055918, 0.0, 0.27269304, 0.0, 5.7033, 1.264831
-  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 9: 100%|#| 1875/1875 [00:24<00:00, 77.81it/s, acc=0.999, loss=[0.060133643, 0.0, 0.27355102, 0.0, 5.572467, 1.256
+  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 0: 100%|#| 1875/1875 [00:25<00:00, 72.81it/s, acc=0.935, loss=[0.28925124, 0.0, -0.30644414, 0.0, 20.413918, 4.64
+  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 1: 100%|#| 1875/1875 [00:21<00:00, 86.49it/s, acc=0.969, loss=[0.114755735, 0.0, -0.24339528, 0.0, 11.499884, 4.2
+  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 2: 100%|#| 1875/1875 [00:21<00:00, 86.86it/s, acc=0.977, loss=[0.10433019, 0.0, -0.23059618, 0.0, 9.896183, 4.140
+  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 3: 100%|#| 1875/1875 [00:21<00:00, 87.05it/s, acc=0.981, loss=[0.100129746, 0.0, -0.22240263, 0.0, 9.100384, 4.05
+  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 4: 100%|#| 1875/1875 [00:21<00:00, 86.85it/s, acc=0.985, loss=[0.09709461, 0.0, -0.21813041, 0.0, 8.6214, 3.99223
+  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 5: 100%|#| 1875/1875 [00:21<00:00, 85.55it/s, acc=0.986, loss=[0.09533547, 0.0, -0.21537316, 0.0, 8.27185, 3.9490
+  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 6: 100%|#| 1875/1875 [00:21<00:00, 86.56it/s, acc=0.988, loss=[0.09372457, 0.0, -0.21466865, 0.0, 7.9795666, 3.91
+  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 7: 100%|#| 1875/1875 [00:21<00:00, 86.79it/s, acc=0.989, loss=[0.09267174, 0.0, -0.21413323, 0.0, 7.759617, 3.889
+  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 8: 100%|#| 1875/1875 [00:21<00:00, 86.36it/s, acc=0.99, loss=[0.0916118, 0.0, -0.21359542, 0.0, 7.5669665, 3.8685
+  0%|                                                                                         | 0/1875 [00:00<?, ?it/s]epoch 9: 100%|#| 1875/1875 [00:22<00:00, 84.51it/s, acc=0.991, loss=[0.091041856, 0.0, -0.21259645, 0.0, 7.4266834, 3.8
