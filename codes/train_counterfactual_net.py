@@ -91,10 +91,10 @@ def train_step(x_batch_test, alter_class, combined, W,base_model,L1_weight,PP_mo
         l1_loss_PP = 0.0
         l1_loss_PN = 0.0
         if PP_mode:
-            l1_loss_PP = L1_weight* my_l1_loss(fmatrix,0.001/1)                     
+            l1_loss_PP = L1_weight * my_l1_loss(fmatrix,0.001/1)                     
             combined_loss = W*counterfactual_loss + l1_loss_PP + pre_softmax_loss
         else:
-            l1_loss_PN = my_l1_loss(fmatrix,0.001)            
+            l1_loss_PN = L1_weight * my_l1_loss(fmatrix,0.001)            
             combined_loss = W*counterfactual_loss + 1*l1_loss_PN
 
     

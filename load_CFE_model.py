@@ -55,8 +55,8 @@ else:
     if args.dataset == 'mnist':
         model.load_weights(filepath=pretrained_weights_path+'/mnist_classifier_weights_epoch10.hdf5')
     else:
-        # model.load_weights(filepath=pretrained_weights_path+'/model_fine_tune_epoch_150.hdf5')
-        model.load_weights(filepath=pretrained_weights_path+'/model_debugged_0.7033407_7064.hdf5')
+        model.load_weights(filepath=pretrained_weights_path+'/model_fine_tune_epoch_150.hdf5')
+        # model.load_weights(filepath=pretrained_weights_path+'/model_debugged_0.7033407_7064.hdf5')
         # model.load_weights(filepath=pretrained_weights_path+'/model_debugged_0.7027442_7061.hdf5')
         # model.load_weights(filepath=pretrained_weights_path+'/model_debugged_0.70240325_7042.hdf5')
         # model.load_weights(filepath=pretrained_weights_path+'/model_retrained_normal.hdf5')

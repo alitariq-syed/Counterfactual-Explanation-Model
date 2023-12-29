@@ -79,6 +79,8 @@ for loop in range(start_class, classes):
         if args.counterfactual_PP:
             sys.stdout = open(file=weights_path+"/console_output_"+str(args.alter_class)+".txt", mode="w")    
         else:
+            log_path = weights_path+"/console_output_PN_"+str(args.alter_class)+".txt"
+            print(log_path)
             sys.stdout = open(file=weights_path+"/console_output_PN_"+str(args.alter_class)+".txt", mode="w")    
     else: print("not saving log file")
         
@@ -88,7 +90,7 @@ for loop in range(start_class, classes):
 
     #%% create base model
     #modify base model (once it has been pre-trained separately) to be used with CF model later
-    GAP_layer = True
+    GAP_layer = False
     if args.counterfactual_PP:
         top_filters = base_model.output_shape[3] # flters in top conv layer (512 for VGG)
         fmatrix = tf.keras.layers.Input(shape=(top_filters),name='fmatrix')
@@ -227,7 +229,7 @@ for loop in range(start_class, classes):
     elif GAP_layer == True:
         x = Dense(num_filters, activation='relu')(mean_fmap_dropout)
     else:
-        x = Conv2D(num_filters, (3, 3), activation = 'relu', padding = 'same')(base_model.output)
+        x = Conv2D(num_filters, (3, 3), activation = 'relu', padding = 'same',name = 'PN_conv')(base_model.output)
 
     #x = tf.keras.layers.Lambda(masking_layer)(x)
     #x = CustomLayer()(x)

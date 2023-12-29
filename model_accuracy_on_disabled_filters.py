@@ -39,7 +39,8 @@ args.alter_class = 9
 print("for class: ", label_map[args.alter_class])
 #%%
 
-save_folder = "./model_debugging_work/epoch_"+str(args.cfe_epochs)+"/"+label_map[args.alter_class]+"/"
+# save_folder = "./model_debugging_work/epoch_"+str(args.cfe_epochs)+"/"+label_map[args.alter_class]+"/"
+save_folder = "./figs_for_paper/"
 
 mName = args.model[:-1]+'_'+args.dataset
 
@@ -62,7 +63,7 @@ random_enabled_filters = 1-random_filters_alter_class
 # print("randoms filters disabled:", np.sum(random_filters_alter_class))          
 
 #%%
-enabled_filters = np.ones(512)
+# enabled_filters = np.ones(512)
 test_acc, test_loss, c_report = model_accuracy_filters(model,test_gen, enabled_filters, args)
 
 #%%

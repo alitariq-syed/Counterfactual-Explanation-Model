@@ -40,12 +40,12 @@ parser.add_argument('--resume_from_epoch' ,default = 30, type=np.int32)## False 
 parser.add_argument('--test_counterfactual_net' ,default = False, type=str2bool)## 
 parser.add_argument('--load_counterfactual_net',default = True, type=str2bool)
 parser.add_argument('--resume', default =True, type=str2bool) # load saved weights for base model
-parser.add_argument('--alter_class', default = 10, type = np.int32) # alter class #misclassified classes 9-170
-parser.add_argument('--analysis_class', default = 6, type = np.int32) # class for which images are loaded and analyzed
+parser.add_argument('--alter_class', default = 9, type = np.int32) # alter class #misclassified classes 9-170
+parser.add_argument('--analysis_class', default = 9, type = np.int32) # class for which images are loaded and analyzed
 parser.add_argument('--find_global_filters', default = False, type=str2bool) # perform statistical analysis to find the activation magnitude of all filters for the alter class and train images of alter class
 #parser.add_argument('--alter_class_2', default = 0, type = np.int32) # alter class for 2nd example, 9, 170, 25, 125, 108
 parser.add_argument('--cfe_epochs', default = 10, type = np.int32 ) #100 for mnist, 200 for CUB
-parser.add_argument('--l1_weight', default = 2, type = np.float32) # 2 default
+parser.add_argument('--l1_weight', default = 0.005, type = np.float32) # 2 default
 parser.add_argument('--save_logFile', default = True, type=str2bool) #
 
 #parser.add_argument('--pretrained', default = False) # load self-pretrained model for cifar dataset... i.e. load base model already trained on cifar-10
@@ -54,14 +54,14 @@ parser.add_argument('--save_logFile', default = True, type=str2bool) #
 parser.add_argument('--augmentation' ,default = True, type=str2bool)## 
 
 #base model parameters
-parser.add_argument('--dataset',default = 'fmnist')#NIST, BraTS,mnist, cifar10, CUB200, #cxr1000, #catsvsdogs, #VOC2010, #fmnist
+parser.add_argument('--dataset',default = 'CUB200')#NIST, BraTS,mnist, cifar10, CUB200, #cxr1000, #catsvsdogs, #VOC2010, #fmnist
 parser.add_argument('--save_directory',default = './trained_weights/')
 parser.add_argument('--train_using_builtin_fit_method',default = True)#for training base model easily
 parser.add_argument('--train',default = False)
 parser.add_argument('--fine_tune',default = False) # fine tune all weights after transfer learning step (CUB dataset)
 parser.add_argument('--test', default = True)
-parser.add_argument('--model',default = 'customCNN/')#customCNN, VGG16, resnet50,efficientnet, inceptionv3
-parser.add_argument('--imagenet_weights',default = False) #use imageNet pretrained weights (True for CUB dataset)
+parser.add_argument('--model',default = 'VGG16/')#customCNN, VGG16, resnet50,efficientnet, inceptionv3
+parser.add_argument('--imagenet_weights',default = True) #use imageNet pretrained weights (True for CUB dataset)
 
 KAGGLE = False
 
@@ -76,7 +76,7 @@ if (args.train_counterfactual_net and args.train_all_classes):
     dropout = ""
     if args.dropout:
         dropout = "dropout"
-    weights_path = args.save_directory+args.model+args.dataset+'/all_clases/'+dropout+'/epochs_'+str(args.cfe_epochs)
+    weights_path = args.save_directory+args.model+args.dataset+'/all_clases_test/'+dropout+'/epochs_'+str(args.cfe_epochs)
     if KAGGLE:
         resume_path = kaggle_load_dir+args.model+args.dataset+'/all_clases/'+dropout+'/epochs_'+str(args.resume_from_epoch)
     else:

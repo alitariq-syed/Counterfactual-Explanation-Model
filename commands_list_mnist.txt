@@ -8,3 +8,11 @@ python train_CFE_model.py --alter_class 6
 python train_CFE_model.py --alter_class 7
 python train_CFE_model.py --alter_class 8
 python train_CFE_model.py --alter_class 9
+
+
+python train_CFE_model.py --alter_class 9
+python train_CFE_model.py --alter_class 25
+python train_CFE_model.py --alter_class 108
+python train_CFE_model.py --alter_class 125
+python train_CFE_model.py --alter_class 170
+
